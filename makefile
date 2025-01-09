@@ -11,10 +11,10 @@
 
 ## Variables
 
-DOCKER_NAMESPACE = homebridge
-DOCKER_REPOSITORY = homebridge
-DOCKER_TAG = latest
-ISO_SUBDIVISION = ${ISO_SUBDIVISION}
+DOCKER_NAMESPACE := homebridge
+DOCKER_REPOSITORY := homebridge
+DOCKER_TAG := latest
+ISO_SUBDIVISION := ${ISO_SUBDIVISION}
 
 ifndef ISO_SUBDIVISION
     $(error Expected a value for ISO_SUBDIVISION. Example: make new-container ISO_SUBDIVSION=US-WA)
@@ -33,25 +33,26 @@ export IMAGE := $(DOCKER_NAMESPACE)/$(DOCKER_REPOSITORY):$(DOCKER_TAG)
 
 ## Targets
 
-new-container: $(CERTIFICATES_ROOT)/certficate-request.conf $(CERTIFICATES_ROOT)/self-signed.csr $(CERTIFICATES_ROOT)/private-key.pem $(CERTIFICATES_ROOT)/public-key.pem
+new-container: $(CERTIFICATES_ROOT)/certificate-request.conf $(CERTIFICATES_ROOT)/self-signed.csr $(CERTIFICATES_ROOT)/private-key.pem $(CERTIFICATES_ROOT)/public-key.pem
 	mkdir -p "$(VOLUME_ROOT)/certificates"\
-	&& cp "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"\
+	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"\
 	&& docker compose -f "$(PROJECT_FILE)" create
 
 start-container:
 	docker compose -f "$(PROJECT_FILE)" start
 
 new-certificates:
-	mkdir -p "certifcates/$(ISO_SUBDIVISION)"\
-	&& cd "certifcates/$(ISO_SUBDIVISION)"\
+	mkdir -p "$(CERTIFICATES_ROOT)"\
+	&& cd "$(CERTIFICATES_ROOT)"\
 	&& touch private-key.pem\
 	&& chmod go-rwx private-key.pem\
-	&& openssl req -new -config certficate-request.conf -nodes -out self-signed.csr -quiet\
+	&& openssl req -new -config certificate-request.conf -nodes -out self-signed.csr -quiet\
 	&& openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
 
 update-certificates:
-	make new-certficates\
-	&& cp "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
+	make new-certificates\
+	&& 	mkdir -p "$(VOLUME_ROOT)/certificates"\
+	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
 
 ## Rules
 
