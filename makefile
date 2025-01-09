@@ -14,7 +14,7 @@
 DOCKER_NAMESPACE = homebridge
 DOCKER_REPOSITORY = homebridge
 DOCKER_TAG = latest
-ISO_SUBDIVISION =
+ISO_SUBDIVISION = ${ISO_SUBDIVISION}
 
 ifndef ISO_SUBDIVISION
     $(error Expected a value for ISO_SUBDIVISION. Example: make new-container ISO_SUBDIVSION=US-WA)
@@ -48,6 +48,10 @@ new-certificates:
 	&& chmod go-rwx private-key.pem\
 	&& openssl req -new -config certficate-request.conf -nodes -out self-signed.csr -quiet\
 	&& openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
+
+update-certificates:
+	make new-certficates\
+	&& cp "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
 
 ## Rules
 
