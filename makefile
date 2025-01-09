@@ -50,8 +50,8 @@ new-certificates:
 	&& openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
 
 update-certificates:
-	make new-certficates\
-	&& cp "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
+    make new-certficates\
+    && cp "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
 
 ## Rules
 
