@@ -36,6 +36,8 @@ export IMAGE := $(DOCKER_NAMESPACE)/$(DOCKER_REPOSITORY):$(DOCKER_TAG)
 docker_compose := sudo IMAGE=$(IMAGE) docker compose -f "$(PROJECT_FILE)"
 container_certificates := $(CERTIFICATES_ROOT)/self-signed.csr $(CERTIFICATES_ROOT)/private-key.pem $(CERTIFICATES_ROOT)/public-key.pem
 
+$(warning $(docker_compose))
+
 ## TARGETS
 
 Get-HomebridgeStatus:
@@ -44,7 +46,8 @@ Get-HomebridgeStatus:
 New-Homebridge: $(container_certificates)
 	mkdir -p "$(VOLUME_ROOT)/certificates"\
 	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"\
-	&& $(docker_copose) create --force-recreate --pull always --remove-orphans
+	&& $(docker_compose) create --force-recreate --pull always --remove-orphans
+	@echo 'Use "make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)" to start Homebridge in $(ISO_SUBDIVISION).'
 
 Restart-Homebridge:
 	$(docker_compose) restart
@@ -61,7 +64,6 @@ New-HomebridgeCertificates: $(CERTIFICATES_ROOT)/certificate-request.conf
 	&& openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
 
 Update-HomebridgeCertificates: $(container_certificates)
-	make new-certificates\
 	&& mkdir -p "$(VOLUME_ROOT)/certificates"\
 	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
 
