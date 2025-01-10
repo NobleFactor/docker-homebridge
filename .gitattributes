@@ -1,0 +1,6 @@
+###############################################################################
+# Encrypted secrets
+###############################################################################
+
+/Home/all-Darwin/local/bin/Mount-ExternalPhysicalDisks filter-git-crypt diff=git-crypt
+/certificates/**/* filter-git-crypt diff=git-crypt
