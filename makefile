@@ -36,10 +36,10 @@ export IMAGE := $(DOCKER_NAMESPACE)/$(DOCKER_REPOSITORY):$(DOCKER_TAG)
 new-container: $(CERTIFICATES_ROOT)/certificate-request.conf $(CERTIFICATES_ROOT)/self-signed.csr $(CERTIFICATES_ROOT)/private-key.pem $(CERTIFICATES_ROOT)/public-key.pem
 	mkdir -p "$(VOLUME_ROOT)/certificates"\
 	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"\
-	&& sudo docker compose -f "$(PROJECT_FILE)" create
+	&& sudo IMAGE="$(IMAGE)" docker compose -f "$(PROJECT_FILE)" create
 
 start-container:
-	sudo docker compose -f "$(PROJECT_FILE)" start
+	sudo IMAGE=$(IMAGE) docker compose -f "$(PROJECT_FILE)" start
 
 new-certificates:
 	mkdir -p "$(CERTIFICATES_ROOT)"\
@@ -51,7 +51,7 @@ new-certificates:
 
 update-certificates:
 	make new-certificates\
-	&& 	mkdir -p "$(VOLUME_ROOT)/certificates"\
+	&& mkdir -p "$(VOLUME_ROOT)/certificates"\
 	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
 
 ## Rules
