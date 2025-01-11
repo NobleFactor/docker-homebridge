@@ -58,7 +58,7 @@ New-HomebridgeCertificates: $(CERTIFICATES_ROOT)/certificate-request.conf
 	&& cd "$(CERTIFICATES_ROOT)"\
 	&& touch private-key.pem\
 	&& chmod go-rwx private-key.pem\
-	&& openssl req -new -config certificate-request.conf -nodes -out self-signed.csr -quiet\
+	&& openssl req -new -config certificate-request.conf -nodes -out self-signed.csr\
 	&& openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
 
 Update-HomebridgeCertificates: $(container_certificates)
