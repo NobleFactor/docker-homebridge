@@ -2,10 +2,10 @@
 # Encrypted secrets
 ###############################################################################
 
-certificates/** filter-git-crypt diff=git-crypt
-*certificate-request.conf filter-git-crypt diff=git-crypt
-*.csr filter-git-crypt diff=git-crypt
-*.pem filter-git-crypt diff=git-crypt
+certificates/** filteri=git-crypt diff=git-crypt
+*certificate-request.conf filter=git-crypt diff=git-crypt
+*.csr filter=git-crypt diff=git-crypt
+*.pem filter=git-crypt diff=git-crypt
 
 # Guard against encrypting .gitattributes files
 .gitattributes !filter !diff
