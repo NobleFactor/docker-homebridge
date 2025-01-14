@@ -1,19 +1,21 @@
-#################################################
+########################################################################################################################
 # Copyright (c) 2024 Noble Factor
-# homebridge-image
-#############################################
+# homebridge-base_image
+########################################################################################################################
 
-# TODO (DANOBLE) Reference SPDX document that references MIT and Homebridge software terms and conditions.
+# TODO (david-noble) Reference SPDX document that references MIT and Homebridge software terms and conditions.
+# TODO (david-noble) Enable multi-platform builds as an option by adding a step to detect and create a multi-platform builder (See reference 3)
 
 # REFERENCE
 # 1. https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
 # 2. https://en.wikipedia.org/wiki/ISO_3166-2:US
+# 3. https://docs.docker.com/build/building/multi-platform/
 
 ## PARAMETERS
 
-DOCKER_NAMESPACE := homebridge
-DOCKER_REPOSITORY := homebridge
-DOCKER_TAG := latest
+NOBLEFACTOR_VERSION := preview.1
+HOMEBRIDGE_VERSION := latest
+
 ISO_SUBDIVISION := ${ISO_SUBDIVISION}
 
 ifndef ISO_SUBDIVISION
@@ -22,30 +24,40 @@ endif
 
 ## VARIABLES
 
-export PROJECT_ROOT := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-export PROJECT_FILE := $(PROJECT_ROOT)$(DOCKER_REPOSITORY).$(ISO_SUBDIVISION).yml
+project_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+project_file := $(project_root)homebridge.$(ISO_SUBDIVISION).yaml
 
-ifeq ("$(wildcard $(PROJECT_FILE))","")
-    $(error Project file for $(ISO_SUBDIVISION) does not exist: $(PROJECT_FILE))
+ifeq ("$(wildcard $(project_file))","")
+    $(error Project file for $(ISO_SUBDIVISION) does not exist: $(project_file))
 endif
 
-export CERTIFICATES_ROOT := $(PROJECT_ROOT)certificates/$(ISO_SUBDIVISION)
-export VOLUME_ROOT := $(PROJECT_ROOT)volumes/$(ISO_SUBDIVISION)
-export IMAGE := $(DOCKER_NAMESPACE)/$(DOCKER_REPOSITORY):$(DOCKER_TAG)
+docker_compose := sudo NOBLEFACTOR_VERSION="$(NOBLEFACTOR_VERSION)" RCLONE_CONF="$$(xxd -c0 -p secrets/rclone.conf)" docker compose -f "$(project_file)"
+certificates_root := $(project_root)certificates/$(ISO_SUBDIVISION)
+volume_root := $(project_root)volumes/$(ISO_SUBDIVISION)
 
-docker_compose := sudo IMAGE=$(IMAGE) docker compose -f "$(PROJECT_FILE)"
-container_certificates := $(CERTIFICATES_ROOT)/self-signed.csr $(CERTIFICATES_ROOT)/private-key.pem $(CERTIFICATES_ROOT)/public-key.pem
+certificates := \
+	$(certificates_root)/self-signed.csr\
+	$(certificates_root)/private-key.pem\
+	$(certificates_root)/public-key.pem
+
+container_backups := $(volume_root)/backups
+
+container_certificates := \
+	$(volume_root)/certificates/self-signed.csr\
+	$(volume_root)/certificates/private-key.pem\
+	$(volume_root)/certificates/public-key.pem
 
 ## TARGETS
 
 Get-HomebridgeStatus:
 	$(docker_compose) ps --format json | jq .
-    
-New-Homebridge: $(container_certificates)
-	mkdir -p "$(VOLUME_ROOT)/certificates"\
-	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"\
-	&& $(docker_compose) create --force-recreate --pull always --remove-orphans
-	@echo 'Use "make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)" to start Homebridge in $(ISO_SUBDIVISION).'
+
+New-Homebridge: $(certificates) $(container_backups) $(container_certificates)
+	@echo RCLONE_CONF=$(sh xxd -c0 -p secrets/rclone.conf)
+	docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
+	&& $(docker_compose) create --force-recreate --pull never --remove-orphans
+	@echo "\nWhat's next:"
+	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 Restart-Homebridge:
 	$(docker_compose) restart
@@ -53,19 +65,30 @@ Restart-Homebridge:
 Start-Homebridge:
 	$(docker_compose) start
 
-New-HomebridgeCertificates: $(CERTIFICATES_ROOT)/certificate-request.conf
-	mkdir -p "$(CERTIFICATES_ROOT)"\
-	&& cd "$(CERTIFICATES_ROOT)"\
+Stop-Homebridge:
+	$(docker_compose) stop
+
+New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf
+	cd "$(certificates_root)"\
 	&& touch private-key.pem\
 	&& chmod go-rwx private-key.pem\
 	&& openssl req -new -config certificate-request.conf -nodes -out self-signed.csr\
 	&& openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
 
-Update-HomebridgeCertificates: $(container_certificates)
-	mkdir -p "$(VOLUME_ROOT)/certificates"\
-	&& cp --verbose "$(CERTIFICATES_ROOT)/"*.pem "$(VOLUME_ROOT)/certificates"
-	@echo 'Use "make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)" so that Homebridge in $(ISO_SUBDIVISION) picks up the new certificates.'
-## Rules
+Update-HomebridgeCertificates: $(certificates)
+	mkdir -p "$(volume_root)/certificates"\
+	&& cp --verbose "$(certificates_root)/"*.pem "$(volume_root)/certificates"
+	@echo "\nWhat\'s next:"
+	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
-$(CERTIFICATES_ROOT)/self-signed.csr $(CERTIFICATES_ROOT)/private-key.pem $(CERTIFICATES_ROOT)/public-key.pem:
-	make new-certificates
+## BUILD RULES
+
+$(certificates):
+	make New-HomebridgeCertificates
+
+$(container_backups):
+	mkdir -p $(container_backups)
+
+$(container_certificates):
+	mkdir -p "$(volume_root)/certificates"\
+	&& cp --verbose "$(certificates_root)/"*.pem "$(volume_root)/certificates"
