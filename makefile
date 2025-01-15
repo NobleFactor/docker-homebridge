@@ -31,8 +31,9 @@ ifeq ("$(wildcard $(project_file))","")
     $(error Project file for $(ISO_SUBDIVISION) does not exist: $(project_file))
 endif
 
-docker_compose := sudo NOBLEFACTOR_VERSION="$(NOBLEFACTOR_VERSION)" RCLONE_CONF="$$(xxd -c0 -p secrets/rclone.conf)" docker compose -f "$(project_file)"
-certificates_root := $(project_root)certificates/$(ISO_SUBDIVISION)
+docker_compose := sudo ISO_SUBDIVISION=$(ISO_SUBDIVISION) NOBLEFACTOR_VERSION="$(NOBLEFACTOR_VERSION)" docker compose -f "$(project_file)"
+certificates_root := $(project_root)secrets/certificates/$(ISO_SUBDIVISION)
+rclone_conf_root := $(project_root)secrets/rclone
 volume_root := $(project_root)volumes/$(ISO_SUBDIVISION)
 
 certificates := \
@@ -40,20 +41,28 @@ certificates := \
 	$(certificates_root)/private-key.pem\
 	$(certificates_root)/public-key.pem
 
+rclone_conf := $(rclone_conf_root)/rclone.conf
+
 container_backups := $(volume_root)/backups
 
 container_certificates := \
-	$(volume_root)/certificates/self-signed.csr\
-	$(volume_root)/certificates/private-key.pem\
-	$(volume_root)/certificates/public-key.pem
+	$(volume_root)/.config/certificates/self-signed.csr\
+	$(volume_root)/.config/certificates/private-key.pem\
+	$(volume_root)/.config/certificates/public-key.pem
+
+container_rclone_conf := \
+	$(volume_root)/.config/rclone/rclone.conf
 
 ## TARGETS
+
+clean:
+	make Stop-Homebridge\
+	&& docker system prune --force --all && sudo rm -rfv volumes/*
 
 Get-HomebridgeStatus:
 	$(docker_compose) ps --format json | jq .
 
-New-Homebridge: $(certificates) $(container_backups) $(container_certificates)
-	@echo RCLONE_CONF=$(sh xxd -c0 -p secrets/rclone.conf)
+New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf)
 	sudo docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
 	&& $(docker_compose) create --force-recreate --pull never --remove-orphans
 	@echo "\nWhat's next:"
@@ -70,14 +79,18 @@ Stop-Homebridge:
 
 New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf
 	cd "$(certificates_root)"\
-	&& touch private-key.pem\
-	&& chmod go-rwx private-key.pem\
 	&& openssl req -new -config certificate-request.conf -nodes -out self-signed.csr\
 	&& openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
 
 Update-HomebridgeCertificates: $(certificates)
-	mkdir -p "$(volume_root)/certificates"\
-	&& cp --verbose "$(certificates_root)/"*.pem "$(volume_root)/certificates"
+	mkdir --parent "$(volume_root)/.config/certificates"\
+	&& cp --verbose $(certificates) "$(volume_root)/.config/certificates"
+	@echo "\nWhat\'s next:"
+	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
+
+Update-HomebridgeRcloneConf: $(rclone_conf)
+	mkdir --parent "$(volume_root)/.config/rclone"\
+	&& cp --verbose $(rclone_conf) "$(volume_root)/.config/rclone"
 	@echo "\nWhat\'s next:"
 	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
@@ -89,6 +102,8 @@ $(certificates):
 $(container_backups):
 	mkdir -p $(container_backups)
 
-$(container_certificates):
-	mkdir -p "$(volume_root)/certificates"\
-	&& cp --verbose "$(certificates_root)/"*.pem "$(volume_root)/certificates"
+$(container_certificates): $(certificates)
+	make Update-HomebridgeCertificates
+
+$(container_rclone_conf): $(rclone_conf)
+	make Update-HomebridgeRcloneConf

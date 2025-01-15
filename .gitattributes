@@ -2,14 +2,12 @@
 # Encrypted secrets
 ###############################################################################
 
-/certificates/** filter=git-crypt diff=git-crypt
+/secrets/** filter=git-crypt diff=git-crypt
 
 *.key filter=git-crypt diff=git-crypt
 *.pem filter=git-crypt diff=git-crypt
 *.p12 filter=git-crypt diff=git-crypt
 *.pfx filter=git-crypt diff=git-crypt
-
-/secrets/** filter=git-crypt diff=git-crypt
 
 # Guard against encrypting .gitattributes files
 .gitattributes !filter !diff

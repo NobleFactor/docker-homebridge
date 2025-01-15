@@ -1,7 +1,6 @@
 services:
   homebridge:
     hostname: homebridge.us-wa.home.thenoble.family
-    container_name: homebridge.us-wa
     volumes:
       - ./volumes/US-WA:/homebridge
     extends:

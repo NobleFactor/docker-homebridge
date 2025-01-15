@@ -1,6 +1,7 @@
 services:
   homebridge:
     image: noblefactor/homebridge:${NOBLEFACTOR_VERSION}
+    container_name: homebridge.${ISO_SUBDIVISION}
     network_mode: host
     restart: always
     cap_add:
@@ -8,7 +9,7 @@ services:
     devices:
       - /dev/fuse
     environment:
-      RCLONE_CONF: ${RCLONE_CONF}
+      NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION: ${ISO_SUBDIVISION}
     logging:
       driver: json-file
       options:

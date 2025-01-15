@@ -18,35 +18,19 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 SHELL ["/bin/bash", "-c"]
 
-ARG iso_subdivision
-
 # INSTALLATION
 
 RUN <<EOF
-set -o errexit -o nounset
+set -o errexit
 apt-get update
 apt-get -y upgrade
-apt-get -y install avahi-daemon fuse3 kmod rclone xxd
-<<<<<<< HEAD
-mkdir --mode=go-rw --parents /var/lib/rlcone /var/log/rclone /homebridge/.config/rclone /homebridge/backups
-=======
-su root
-mkdir --mode=go-rw --parents /var/lib/rlcone /var/log/rclone /homebridge/backups
-if [[ \$? -ne 0 ]]; then
-    echo WTF? > WTF
-    mkdir /homebridge/.config
-    mkdir /homebridge/.config/rclone
-fi
->>>>>>> 22c4b0f233e4ced0c1a6d1f474815898a5c92347
+apt-get -y install avahi-daemon fuse3 kmod rclone
+mkdir /var/lib/rclone /var/log/rclone
 EOF
 
 # RUNTIME ENVIRONMENT
 
-ENV HOMEBRIDGE_ISO_SUBDIVISION="${iso_subdivision}"
-
-# ENTRYPOINT set -o errexit -o nounset && echo ${RCLONE_CONF} | /usr/bin/xxd -c0 -p -r > /etc/rclone.conf \
-#     && /usr/bin/rclone mount --daemon --vfs-cache-mode writes\
-#         --config /etc/rclone.conf\
-#         --cache-dir /var/lib/rclone\
-#         backups:Homebridge/backups/US-WA /homebridge/backups\
-    && /init
+ENTRYPOINT /usr/bin/rclone mount --daemon --vfs-cache-mode writes --config /homebridge/.config/rclone/rclone.conf\
+ --cache-dir /var/lib/rclone --log-file /var/log/rclone/rclone.log\
+ backups:Homebridge/backups/${NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION} /homebridge/backups\
+ && /init
