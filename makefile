@@ -57,7 +57,8 @@ container_rclone_conf := \
 
 clean:
 	make Stop-Homebridge\
-	&& docker system prune --force --all && sudo rm -rfv volumes/*
+	&& sudo docker system prune --force --all\
+    && sudo rm -rfv volumes/*
 
 Get-HomebridgeStatus:
 	$(docker_compose) ps --format json | jq .
