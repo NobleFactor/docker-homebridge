@@ -27,7 +27,7 @@ set -o errexit -o nounset
 apt-get update
 apt-get -y upgrade
 apt-get -y install avahi-daemon fuse3 kmod rclone xxd
-mkdir --mode=go-rw --parents /var/lib/rlcone /var/log/rclone /homebridge/.config/rclone /homebridge/backups
+mkdir --mode=go-rw -p /var/lib/rlcone /var/log/rclone /homebridge/.config/rclone /homebridge/backups
 EOF
 
 # RUNTIME ENVIRONMENT
