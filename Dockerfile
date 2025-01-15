@@ -27,15 +27,22 @@ set -o errexit -o nounset
 apt-get update
 apt-get -y upgrade
 apt-get -y install avahi-daemon fuse3 kmod rclone xxd
-mkdir --mode=go-rw --parents /var/lib/rlcone /var/log/rclone /homebridge/.config/rclone /homebridge/backups
+su root
+mkdir --mode=go-rw --parents /var/lib/rlcone /var/log/rclone /homebridge/backups
+if [[ \$? -ne 0 ]]; then
+    echo WTF? > WTF
+    mkdir /homebridge/.config
+    mkdir /homebridge/.config/rclone
+fi
 EOF
 
 # RUNTIME ENVIRONMENT
 
 ENV HOMEBRIDGE_ISO_SUBDIVISION="${iso_subdivision}"
 
-ENTRYPOINT echo ${RCLONE_CONF} | /usr/bin/xxd -c0 -p -r > /homebridge/.config/rclone/rclone.conf \
-    && rclone mount --daemon --vfs-cache-mode writes backups:Homebridge/backups/US-WA /homebridge/backups\
-        --config /homebridge/.config/rclone/rclone.conf\
-        --cache-dir /var/lib/rclone\
-    && /init
+# ENTRYPOINT set -o errexit -o nounset && echo ${RCLONE_CONF} | /usr/bin/xxd -c0 -p -r > /etc/rclone.conf \
+#     && /usr/bin/rclone mount --daemon --vfs-cache-mode writes\
+#         --config /etc/rclone.conf\
+#         --cache-dir /var/lib/rclone\
+#         backups:Homebridge/backups/US-WA /homebridge/backups\
+#     && /init
