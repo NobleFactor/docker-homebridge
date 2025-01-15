@@ -7,7 +7,7 @@ services:
     cap_add:
       - SYS_ADMIN 
     devices:
-      - /dev/fuse
+      - /dev/fuse:/dev/fuse:rwm
     environment:
       NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION: ${ISO_SUBDIVISION}
     logging:
@@ -15,3 +15,5 @@ services:
       options:
         max-size: "10mb"
         max-file: "1"
+    security_opt:
+      - apparmor:unconfined

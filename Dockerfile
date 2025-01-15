@@ -28,9 +28,23 @@ apt-get -y install avahi-daemon fuse3 kmod rclone
 mkdir /var/lib/rclone /var/log/rclone
 EOF
 
+RUN touch /noblefactor.init && chmod +x /noblefactor.init && cat > /noblefactor.init <<EOF
+#!/usr/bin/env bash
+
+set -o errexit -o nounset
+
+export RCLONE_CACHE_DIR=/var/lib/rclone
+export RCLONE_CONFIG=/homebridge/.config/rclone/rclone.conf
+export RCLONE_LOG_FILE=/var/log/rclone/rclone.log
+export RCLONE_LOG_LEVEL=INFO
+export RCLONE_VFS_CACHE_MODE=full
+
+if ! /usr/bin/rclone mount --daemon backups:Homebridge/backups/\${NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION} /homebridge/backups; then
+    echo "Rclone exit code: $?" && tail -3 /var/log/rclone/rclone.log
+    exit 1
+fi
+EOF
+
 # RUNTIME ENVIRONMENT
 
-ENTRYPOINT /usr/bin/rclone mount --daemon --vfs-cache-mode writes --config /homebridge/.config/rclone/rclone.conf\
- --cache-dir /var/lib/rclone --log-file /var/log/rclone/rclone.log\
- backups:Homebridge/backups/${NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION} /homebridge/backups\
- && /init
+ENTRYPOINT /noblefactor.init && /init
