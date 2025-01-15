@@ -54,7 +54,7 @@ Get-HomebridgeStatus:
 
 New-Homebridge: $(certificates) $(container_backups) $(container_certificates)
 	@echo RCLONE_CONF=$(sh xxd -c0 -p secrets/rclone.conf)
-	docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
+	sudo docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
 	&& $(docker_compose) create --force-recreate --pull never --remove-orphans
 	@echo "\nWhat's next:"
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
