@@ -16,7 +16,7 @@ LABEL org.opencontainers.image.vendor="Noble Factor"
 LABEL org.opencontainers.image.authors="David.Noble@noblefactor.com"
 LABEL org.opencontainers.image.licenses="MIT"
 
-SHELL ["/bin/bash", "-c"]
+SHELL ["/usr/bin/env", "bash", "-c"]
 
 # INSTALLATION
 
