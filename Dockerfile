@@ -13,7 +13,7 @@ ARG homebridge_version=latest
 FROM homebridge/homebridge:${homebridge_version}
 
 LABEL org.opencontainers.image.vendor="Noble Factor"
-LABEL org.opencontainers.image.authors="David-Noble@noblefactor.com"
+LABEL org.opencontainers.image.authors="David.Noble@noblefactor.com"
 LABEL org.opencontainers.image.licenses="MIT"
 
 SHELL ["/bin/bash", "-c"]

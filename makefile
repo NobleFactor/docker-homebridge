@@ -55,6 +55,17 @@ container_rclone_conf := \
 
 ## TARGETS
 
+help:
+	@echo "Manage homebridge deployment for ISO_SUBDIVISION"
+	@echo "SYNTAX"
+	@echo "    make <command> ISO_SUBDIVISION=<location>"
+	@echo "    command  New-Homebridge"
+	@echo "             Start-Homebridge"
+	@echo "             Stop-Homebridge" 
+	@echo "             Restart-Homebridge"
+	@echo "             Get-HomebridgeStatus"
+	@echo "             Update-HomebridgeCertificates"
+
 clean:
 	make Stop-Homebridge\
 	&& sudo docker system prune --force --all\
