@@ -6,7 +6,31 @@
 # TODO (david-noble) Reference SPDX document that references MIT and Homebridge software terms and conditions.
 # TODO (david-noble) Enable multi-platform builds as an option by adding a step to detect and create a multi-platform builder (See reference 3)
 
-# REFERENCE
+define USAGE
+
+NAME
+
+    make makefile -- Manage homebridge deployment for $(ISO_SUBDIVISION)
+
+SYNOPSIS
+
+    make <command> <args>
+
+DESCRIPTION
+
+OPTIONS
+
+    command  New-Homebridge
+             Start-Homebridge
+             Stop-Homebridge 
+             Restart-Homebridge
+             Get-HomebridgeStatus
+             Update-HomebridgeCertificates
+endef
+
+export USAGE
+
+## REFERENCE
 # 1. https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
 # 2. https://en.wikipedia.org/wiki/ISO_3166-2:US
 # 3. https://docs.docker.com/build/building/multi-platform/
@@ -56,20 +80,7 @@ container_rclone_conf := \
 ## TARGETS
 
 help:
-	@echo "Manage homebridge deployment for ISO_SUBDIVISION"
-	@echo "SYNTAX"
-	@echo "    make <command> ISO_SUBDIVISION=<location>"
-	@echo "    command  New-Homebridge"
-	@echo "             Start-Homebridge"
-	@echo "             Stop-Homebridge" 
-	@echo "             Restart-Homebridge"
-	@echo "             Get-HomebridgeStatus"
-	@echo "             Update-HomebridgeCertificates"
-
-clean:
-	make Stop-Homebridge\
-	&& sudo docker system prune --force --all\
-    && sudo rm -rfv volumes/*
+	@echo "$$USAGE"
 
 Get-HomebridgeStatus:
 	$(docker_compose) ps --format json --no-trunc | jq .
@@ -110,6 +121,11 @@ Update-HomebridgeRcloneConf: $(rclone_conf)
 	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 ## BUILD RULES
+
+clean:
+	make Stop-Homebridge\
+	&& sudo docker system prune --force --all\
+    && sudo rm -rfv volumes/*
 
 $(certificates):
 	make New-HomebridgeCertificates
