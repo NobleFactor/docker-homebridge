@@ -72,7 +72,7 @@ clean:
     && sudo rm -rfv volumes/*
 
 Get-HomebridgeStatus:
-	$(docker_compose) ps --format json | jq .
+	$(docker_compose) ps --format json --no-trunc | jq .
 
 New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf)
 	sudo docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
@@ -81,13 +81,16 @@ New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 Restart-Homebridge:
-	$(docker_compose) restart
+	$(docker_compose) restart\
+	&& make Get-HomebridgeStatus
  
 Start-Homebridge:
-	$(docker_compose) start
+	$(docker_compose) start\
+	&& make Get-HomebridgeStatus
 
 Stop-Homebridge:
-	$(docker_compose) stop
+	$(docker_compose) stop\
+	&& make Get-HomebridgeStatus 
 
 New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf
 	cd "$(certificates_root)"\

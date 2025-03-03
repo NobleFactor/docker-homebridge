@@ -1,6 +1,6 @@
 services:
   homebridge:
-    hostname: homebridge.us-wa.home.thenoble.family
+    hostname: homebridge-us-wa
     volumes:
       - ./volumes/US-WA:/homebridge
     extends:
