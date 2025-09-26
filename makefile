@@ -99,6 +99,9 @@ Start-Homebridge:
 	$(docker_compose) start\
 	&& make Get-HomebridgeStatus
 
+Start-HomebridgeShell:
+	sudo docker exec --interactive --tty homebridge.US-WA /bin/bash
+
 Stop-Homebridge:
 	$(docker_compose) stop\
 	&& make Get-HomebridgeStatus 
