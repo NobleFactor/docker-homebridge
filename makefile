@@ -6,7 +6,31 @@
 # TODO (david-noble) Reference SPDX document that references MIT and Homebridge software terms and conditions.
 # TODO (david-noble) Enable multi-platform builds as an option by adding a step to detect and create a multi-platform builder (See reference 3)
 
-# REFERENCE
+define USAGE
+
+NAME
+
+    make makefile -- Manage homebridge deployment for $(ISO_SUBDIVISION)
+
+SYNOPSIS
+
+    make <command> <args>
+
+DESCRIPTION
+
+OPTIONS
+
+    command  New-Homebridge
+             Start-Homebridge
+             Stop-Homebridge 
+             Restart-Homebridge
+             Get-HomebridgeStatus
+             Update-HomebridgeCertificates
+endef
+
+export USAGE
+
+## REFERENCE
 # 1. https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
 # 2. https://en.wikipedia.org/wiki/ISO_3166-2:US
 # 3. https://docs.docker.com/build/building/multi-platform/
@@ -55,13 +79,11 @@ container_rclone_conf := \
 
 ## TARGETS
 
-clean:
-	make Stop-Homebridge\
-	&& sudo docker system prune --force --all\
-    && sudo rm -rfv volumes/*
+help:
+	@echo "$$USAGE"
 
 Get-HomebridgeStatus:
-	$(docker_compose) ps --format json | jq .
+	$(docker_compose) ps --format json --no-trunc | jq .
 
 New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf)
 	sudo docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
@@ -70,13 +92,19 @@ New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 Restart-Homebridge:
-	$(docker_compose) restart
+	$(docker_compose) restart\
+	&& make Get-HomebridgeStatus
  
 Start-Homebridge:
-	$(docker_compose) start
+	$(docker_compose) start\
+	&& make Get-HomebridgeStatus
+
+Start-HomebridgeShell:
+	sudo docker exec --interactive --tty homebridge.US-WA /bin/bash
 
 Stop-Homebridge:
-	$(docker_compose) stop
+	$(docker_compose) stop\
+	&& make Get-HomebridgeStatus 
 
 New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf
 	cd "$(certificates_root)"\
@@ -96,6 +124,11 @@ Update-HomebridgeRcloneConf: $(rclone_conf)
 	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 ## BUILD RULES
+
+clean:
+	make Stop-Homebridge\
+	&& sudo docker system prune --force --all\
+    && sudo rm -rfv volumes/*
 
 $(certificates):
 	make New-HomebridgeCertificates

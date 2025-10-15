@@ -1,6 +1,6 @@
 services:
   homebridge:
-    hostname: homebridge.us-tx.home.thenoble.family
+    hostname: homebridge-us-tx
     volumes:
       - ./volumes/US-TX:/homebridge
     extends:
