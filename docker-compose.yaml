@@ -1,8 +1,11 @@
+version: "3.9"
 services:
   homebridge:
     image: noblefactor/homebridge:${NOBLEFACTOR_VERSION}
-    container_name: homebridge.${ISO_SUBDIVISION}
-    network_mode: host
+    container_name: homebridge-${ISO_SUBDIVISION}
+    networks:
+      - external_network
+    hostname: ${HOSTNAME}
     restart: always
     cap_add:
       - SYS_ADMIN 

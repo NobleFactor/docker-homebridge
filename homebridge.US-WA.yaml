@@ -1,8 +1,11 @@
 services:
   homebridge:
-    hostname: homebridge.us-wa.home.thenoble.family
     volumes:
       - ./volumes/US-WA:/homebridge
     extends:
       file: docker-compose.yaml
       service: homebridge
+networks:
+  external_network:
+    name: ${NETWORK_NAME}
+    external: true
