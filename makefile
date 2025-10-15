@@ -15,27 +15,28 @@ SYNOPSIS
     make <target> ISO_SUBDIVISION=CC-SS [VAR=VALUE ...]
 
 REQUIRED
-    ISO_SUBDIVISION    ISO 3166-2 subdivision code (e.g., US-WA)
+    ISO_SUBDIVISION  ISO 3166-2 subdivision code (e.g., US-WA)
+                     This value is computed from the docker host's geo-location, if it's not assigned.
 
 OPTIONAL
-    STAGE              Deployment stage: dev (default), test, prod
+    STAGE                Deployment stage: dev (default), test, prod
     NOBLEFACTOR_VERSION  Image tag for noblefactor/homebridge (default: preview.2)
     HOMEBRIDGE_VERSION   Upstream Homebridge version (default: latest)
-    HOSTNAME           Override container hostname
-    NETWORK_NAME       Override Docker network name
+    HOSTNAME             Override container hostname
+    NETWORK_NAME         Override Docker network name
 
 TARGETS
-    New-Homebridge               Build image, create network, and create container
-    Start-Homebridge             Start container
-    Stop-Homebridge              Stop container
-    Restart-Homebridge           Restart container
-    Get-HomebridgeStatus         Show compose status (JSON)
-    Start-HomebridgeShell        Open an interactive shell in the container
-    New-HomebridgeCertificates   Generate self-signed certificates
-    Update-HomebridgeCertificates Copy certificates into container volume
-    Update-HomebridgeRcloneConf  Copy rclone.conf into container volume
-    clean                        Stop, remove network, prune system, and clear volumes
-    help                         Show this help
+    New-Homebridge                 Build image, create network, and create container
+    Start-Homebridge               Start container
+    Stop-Homebridge                Stop container
+    Restart-Homebridge             Restart container
+    Get-HomebridgeStatus           Show compose status (JSON)
+    Start-HomebridgeShell          Open an interactive shell in the container
+    New-HomebridgeCertificates     Generate self-signed certificates
+    Update-HomebridgeCertificates  Copy certificates into container volume
+    Update-HomebridgeRcloneConf    Copy rclone.conf into container volume
+    clean                          Stop, remove network, prune system, and clear volumes
+    help                           Show this help
 
 EXAMPLES
     make New-Homebridge ISO_SUBDIVISION=US-WA
@@ -43,35 +44,30 @@ EXAMPLES
     make Update-HomebridgeCertificates ISO_SUBDIVISION=US-WA
     make Get-HomebridgeStatus ISO_SUBDIVISION=US-WA
     make clean ISO_SUBDIVISION=US-WA
+
+REFERENCE
+    1. https://docs.docker.com/build/building/multi-platform/
+    2. https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
+    3. https://en.wikipedia.org/wiki/ISO_3166-2:US
+
 endef
 
 export USAGE
 
-## REFERENCE
-# 1. https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
-# 2. https://en.wikipedia.org/wiki/ISO_3166-2:US
-# 3. https://docs.docker.com/build/building/multi-platform/
+SHELL := /bin/bash
 
 ## PARAMETERS
 
 NOBLEFACTOR_VERSION := preview.2
 HOMEBRIDGE_VERSION := latest
 
-ISO_SUBDIVISION := ${ISO_SUBDIVISION}
-
-ifndef ISO_SUBDIVISION
-    $(error Expected a value for ISO_SUBDIVISION. Example: make new-container ISO_SUBDIVSION=US-WA)
+ifeq ($(strip $(ISO_SUBDIVISION)),)
+    ISO_SUBDIVISION = $(shell curl --no-progress-meter "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"')
 endif
 
-ifeq ($(STAGE),)
-	STAGE := ${STAGE}
-endif
-
-ifeq ($(STAGE),)
+ifeq ($(strip $(STAGE)),)
 	STAGE := dev
-endif
-
-ifeq ($(STAGE),prod)
+else ifeq ($(STAGE),prod)
 	stage :=
 else
 	stage := -$(STAGE)
@@ -146,7 +142,7 @@ New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $
 	sudo docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
 	&& New-DockerNetwork --device $(network_device) --driver $(network_driver) $(project_name) \
 	&& $(docker_compose) create --force-recreate --pull never --remove-orphans
-	@echo "\nWhat's next:"
+	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 Restart-Homebridge:

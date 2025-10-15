@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -o errexit -o nounset -o pipefail
+
+sudo apt update 
+sudo apt install --yes curl gawk ipcalc jq
+sudo "$WORKSPACE/Personal/Tools/Debian/Install-Docker"
