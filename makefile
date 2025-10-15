@@ -9,23 +9,40 @@
 define USAGE
 
 NAME
-
-    make makefile -- Manage homebridge deployment for $(ISO_SUBDIVISION)
+    make - Manage Homebridge deployment for $(ISO_SUBDIVISION)
 
 SYNOPSIS
+    make <target> ISO_SUBDIVISION=CC-SS [VAR=VALUE ...]
 
-    make <command> <args>
+REQUIRED
+    ISO_SUBDIVISION    ISO 3166-2 subdivision code (e.g., US-WA)
 
-DESCRIPTION
+OPTIONAL
+    STAGE              Deployment stage: dev (default), test, prod
+    NOBLEFACTOR_VERSION  Image tag for noblefactor/homebridge (default: preview.2)
+    HOMEBRIDGE_VERSION   Upstream Homebridge version (default: latest)
+    HOSTNAME           Override container hostname
+    NETWORK_NAME       Override Docker network name
 
-OPTIONS
+TARGETS
+    New-Homebridge               Build image, create network, and create container
+    Start-Homebridge             Start container
+    Stop-Homebridge              Stop container
+    Restart-Homebridge           Restart container
+    Get-HomebridgeStatus         Show compose status (JSON)
+    Start-HomebridgeShell        Open an interactive shell in the container
+    New-HomebridgeCertificates   Generate self-signed certificates
+    Update-HomebridgeCertificates Copy certificates into container volume
+    Update-HomebridgeRcloneConf  Copy rclone.conf into container volume
+    clean                        Stop, remove network, prune system, and clear volumes
+    help                         Show this help
 
-    command  New-Homebridge
-             Start-Homebridge
-             Stop-Homebridge 
-             Restart-Homebridge
-             Get-HomebridgeStatus
-             Update-HomebridgeCertificates
+EXAMPLES
+    make New-Homebridge ISO_SUBDIVISION=US-WA
+    make Start-Homebridge ISO_SUBDIVISION=US-WA
+    make Update-HomebridgeCertificates ISO_SUBDIVISION=US-WA
+    make Get-HomebridgeStatus ISO_SUBDIVISION=US-WA
+    make clean ISO_SUBDIVISION=US-WA
 endef
 
 export USAGE
@@ -115,6 +132,13 @@ network_name := $(project_name):$(network_device)
 help:
 	@echo "$$USAGE"
 
+clean:
+	make Stop-Homebridge\
+	&& sudo docker network rm --force $(network_name) || true\
+	&& sudo docker system prune --force --all\
+	&& sudo docker volume prune --force --all\
+	&& sudo rm -rfv volumes/*\
+
 Get-HomebridgeStatus:
 	$(docker_compose) ps --format json --no-trunc | jq .
 
@@ -158,11 +182,6 @@ Update-HomebridgeRcloneConf: $(rclone_conf_file)
 	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 ## BUILD RULES
-
-clean:
-	make Stop-Homebridge\
-	&& sudo docker system prune --force --all\
-    && sudo rm -rfv volumes/*
 
 $(certificates):
 	make New-HomebridgeCertificates
