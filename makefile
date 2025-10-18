@@ -15,17 +15,23 @@ SYNOPSIS
     make <target> ISO_SUBDIVISION=CC-SS [VAR=VALUE ...]
 
 REQUIRED
-    ISO_SUBDIVISION  ISO 3166-2 subdivision code (e.g., US-WA)
-                     This value is computed from the docker host's geo-location, if it's not assigned.
+    IP_RANGE                  IP range for Docker network (e.g., 192.168.1.8/29). This is required to create the Docker
+                              network when making a new Homebridge image.
 
 OPTIONAL
-    STAGE                Deployment stage: dev (default), test, prod
-    NOBLEFACTOR_VERSION  Image tag for noblefactor/homebridge (default: preview.2)
-    HOMEBRIDGE_VERSION   Upstream Homebridge version (default: latest)
-    HOSTNAME             Override container hostname
-    NETWORK_NAME         Override Docker network name
+    HOMEBRIDGE_DOMAIN_NAME    Override container domain name (default: localdomain)
+    HOMEBRIDGE_HOSTNAME       Override container hostname (default: homebridge-ISO_SUBDIVISION[-STAGE])
+    HOMEBRIDGE_VERSION        Upstream Homebridge version (default: latest)
+    IP_ADDRESS                IPv4 address for the Homebridge container (e.g.,192.168.1.10). You may set this whenever
+                              you start or restart the container. The value does not matter any other time. If not set,
+                              Docker will assign an available address from the IP_RANGE.
+    ISO_SUBDIVISION           ISO 3166-2 subdivision code (default: computed from the docker host's geo-location)
+    NOBLEFACTOR_VERSION       Image tag for noblefactor/homebridge (default: preview.2)
+    STAGE                     Deployment stage: dev, test, prod (default: dev)
 
 TARGETS
+    help                           Show this help
+    clean                          Stop, remove network, prune system, and clear volumes
     New-Homebridge                 Build image, create network, and create container
     Start-Homebridge               Start container
     Stop-Homebridge                Stop container
@@ -35,20 +41,11 @@ TARGETS
     New-HomebridgeCertificates     Generate self-signed certificates
     Update-HomebridgeCertificates  Copy certificates into container volume
     Update-HomebridgeRcloneConf    Copy rclone.conf into container volume
-    clean                          Stop, remove network, prune system, and clear volumes
-    help                           Show this help
-
-EXAMPLES
-    make New-Homebridge ISO_SUBDIVISION=US-WA
-    make Start-Homebridge ISO_SUBDIVISION=US-WA
-    make Update-HomebridgeCertificates ISO_SUBDIVISION=US-WA
-    make Get-HomebridgeStatus ISO_SUBDIVISION=US-WA
-    make clean ISO_SUBDIVISION=US-WA
 
 REFERENCE
-    1. https://docs.docker.com/build/building/multi-platform/
-    2. https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
-    3. https://en.wikipedia.org/wiki/ISO_3166-2:US
+    1. https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
+    2. https://en.wikipedia.org/wiki/ISO_3166-2:US
+	3. New-DockerNetwork --help
 
 endef
 
@@ -58,30 +55,91 @@ SHELL := /bin/bash
 
 ## PARAMETERS
 
-NOBLEFACTOR_VERSION := preview.2
-HOMEBRIDGE_VERSION := latest
+### NOBLEFACTOR_VERSION
+
+ifndef NOBLEFACTOR_VERSION
+	NOBLEFACTOR_VERSION :=
+endif
+
+ifeq ($(strip $(NOBLEFACTOR_VERSION)),)
+	NOBLEFACTOR_VERSION := preview.
+endif
+
+### ISO_SUBDIVISION
+
+ifndef ISO_SUBDIVISION
+    ISO_SUBDIVISION :=
+endif
 
 ifeq ($(strip $(ISO_SUBDIVISION)),)
-    ISO_SUBDIVISION = $(shell curl --no-progress-meter "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"')
+    ISO_SUBDIVISION := $(shell curl --no-progress-meter "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"' | tr '[:upper:]' '[:lower:]')
+else
+    ISO_SUBDIVISION := $(shell echo $(ISO_SUBDIVISION) | tr '[:upper:] '[:lower:]')
+endif
+
+### STAGE
+
+ifndef STAGE
+    STAGE :=
 endif
 
 ifeq ($(strip $(STAGE)),)
 	STAGE := dev
-else ifeq ($(STAGE),prod)
+endif
+
+ifeq ($(STAGE),prod)
 	stage :=
 else
 	stage := -$(STAGE)
 endif
 
+### HOMEBRIDGE_DOMAIN_NAME
+
+ifndef HOMEBRIDGE_DOMAIN_NAME
+	HOMEBRIDGE_DOMAIN_NAME :=
+endif
+
+ifeq ($(strip $(HOMEBRIDGE_DOMAIN_NAME)),)
+	HOMEBRIDGE_DOMAIN_NAME := localdomain
+endif
+
+### HOMEBRIDGE_HOSTNAME
+
+ifndef HOMEBRIDGE_HOSTNAME
+	HOMEBRIDGE_HOSTNAME :=
+endif
+
+ifeq ($(strip $(HOMEBRIDGE_HOSTNAME)),)
+	HOMEBRIDGE_HOSTNAME := homebridge-$(ISO_SUBDIVISION)$(stage)
+endif
+
+### HOMEBRIDGE_VERSION
+
+ifndef HOMEBRIDGE_VERSION
+	HOMEBRIDGE_VERSION :=
+endif
+
+ifeq ($(strip $(HOMEBRIDGE_VERSION)),)
+	HOMEBRIDGE_VERSION := latest
+endif
+
 ## VARIABLES
 
-docker_compose = sudo ISO_SUBDIVISION="$(ISO_SUBDIVISION)" NETWORK_NAME="$(network_name)" HOSTNAME="$(container_hostname)" NOBLEFACTOR_VERSION="$(NOBLEFACTOR_VERSION)" docker compose -f "$(project_file)"
+docker_compose = sudo \
+	HOMEBRIDGE_DOMAIN_NAME="$(HOMEBRIDGE_DOMAIN_NAME)" \
+	HOMEBRIDGE_HOSTNAME="$(HOMEBRIDGE_HOSTNAME)" \
+	IP_ADDRESS="$(IP_ADDRESS)" \
+	ISO_SUBDIVISION="$(ISO_SUBDIVISION)" \
+	NETWORK_NAME="$(network_name)" \
+	NOBLEFACTOR_VERSION="$(NOBLEFACTOR_VERSION)" \
+	docker compose -f "$(project_file)" -f "$(project_networks_file)"
 
 ### PATHS
 
 project_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 project_name := homebridge
-project_file := $(project_root)$(project_name).$(ISO_SUBDIVISION).yaml
+project_file := $(project_root)$(project_name)-$(ISO_SUBDIVISION).yaml
+project_networks_file := $(project_root)$(project_name).networks.yaml
 
 ifeq ("$(wildcard $(project_file))","")
     $(error Project file for $(ISO_SUBDIVISION) does not exist: $(project_file))
@@ -89,7 +147,7 @@ endif
 
 ### RCLONE
 
-rclone_conf_root := $(project_root)secrets/rclone
+rclone_conf_root := $(project_root)secrets
 rclone_conf_file:= $(rclone_conf_root)/rclone.conf
 
 ### SECRETS
@@ -113,15 +171,15 @@ container_certificates := \
 	$(volume_root)/.config/certificates/public-key.pem
 
 container_rclone_conf_file:= \
-	$(volume_root)/.config/rclone/rclone.conf
+	$(volume_root)/.config/rclone.conf
 
 ### NETWORK
 
-container_hostname := $(project_name)-$(ISO_SUBDIVISION)$(stage)
-
 network_device := $(shell if [[ $${OSTYPE} == linux-gnu* ]]; then echo eth0; elif [[ $${OSTYPE} == darwin* ]]; then scutil --dns | gawk '/if_index/ { print gensub(/[()]/, "", "g", $$4); exit }'; else echo nul; fi)
 network_driver := $(shell if [[ $${OSTYPE} == linux-gnu* ]]; then echo "macvlan"; else echo "bridge"; fi)
-network_name := $(project_name):$(network_device)
+network_name := $(shell service_name="$(project_name)" device_name="$(network_device)" && echo "$${service_name:0:$$(( 16 - $${#device_name} ))}_$${device_name}")
+
+$(error HOMEBRIDGE_DOMAIN_NAME: $(HOMEBRIDGE_DOMAIN_NAME))
 
 ## TARGETS
 
@@ -138,23 +196,24 @@ clean:
 Get-HomebridgeStatus:
 	$(docker_compose) ps --format json --no-trunc | jq .
 
-New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file)
-	sudo docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/homebridge:$(NOBLEFACTOR_VERSION) . \
-	&& New-DockerNetwork --device $(network_device) --driver $(network_driver) $(project_name) \
-	&& $(docker_compose) create --force-recreate --pull never --remove-orphans
+New-Homebridge: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file) $(check_defined_ip_range)
+	sudo docker buildx build --build-arg homebridge_version=$(HOMEBRIDGE_VERSION) --load --progress=plain --tag=noblefactor/$(project_name):$(NOBLEFACTOR_VERSION) . \
+	&& New-DockerNetwork --ip-range "$(IP_RANGE)" "${project_name}" \
+	&& $(docker_compose) create --force-recreate --pull never --remove-orphans \
+	&& sudo docker inspect "$(HOMEBRIDGE_HOSTNAME)"
 	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
+	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge IP_ADDRESS=<IP_ADDRESS>"
 
-Restart-Homebridge:
+Restart-Homebridge: $(check_defined_ip_address)
 	$(docker_compose) restart\
 	&& make Get-HomebridgeStatus
  
-Start-Homebridge:
+Start-Homebridge: $(check_defined_ip_address)
 	$(docker_compose) start\
 	&& make Get-HomebridgeStatus
 
 Start-HomebridgeShell:
-	sudo docker exec --interactive --tty homebridge.US-WA /bin/bash
+	sudo docker exec --interactive --tty ${HOMEBRIDGE_HOSTNAME} /bin/bash
 
 Stop-Homebridge:
 	$(docker_compose) stop\
@@ -168,16 +227,19 @@ New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf
 Update-HomebridgeCertificates: $(certificates)
 	mkdir --parent "$(volume_root)/.config/certificates"\
 	&& cp --verbose $(certificates) "$(volume_root)/.config/certificates"
-	@echo "\nWhat\'s next:"
-	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
+	@echo -e "\n\033[1mWhat's next:\033[0m"
+	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge"
 
 Update-HomebridgeRcloneConf: $(rclone_conf_file)
-	mkdir --parent "$(volume_root)/.config/rclone"\
-	&& cp --verbose $(rclone_conf_file) "$(volume_root)/.config/rclone"
-	@echo "\nWhat\'s next:"
-	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
+	mkdir --parent "$(volume_root)/.config"\
+	&& cp --verbose $(rclone_conf_file) "$(volume_root)/.config"
+	@echo -e "\n\033[1mWhat's next:\033[0m"	
+	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) reconfigures rclone: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
 
 ## BUILD RULES
+
+check_defined_ip_range:
+	$(if $(filter undefined,$(origin IP_RANGE)), $(error IP_RANGE is required. Specify IP_RANGE=<CIDR> on the make command line.))
 
 $(certificates):
 	make New-HomebridgeCertificates

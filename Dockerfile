@@ -24,7 +24,7 @@ RUN <<EOF
 set -o errexit
 apt-get update
 apt-get -y upgrade
-apt-get -y install avahi-daemon fuse3 kmod rclone
+apt-get -y install avahi-daemon fuse3 iproute2 kmod rclone
 mkdir /var/lib/rclone /var/log/rclone
 EOF
 
@@ -34,7 +34,7 @@ RUN touch /noblefactor.init && chmod +x /noblefactor.init && cat > /noblefactor.
 set -o errexit -o nounset
 
 export RCLONE_CACHE_DIR=/var/lib/rclone
-export RCLONE_CONFIG=/homebridge/.config/rclone/rclone.conf
+export RCLONE_CONFIG=/homebridge/.config/rclone.conf
 export RCLONE_LOG_FILE=/var/log/rclone/rclone.log
 export RCLONE_LOG_LEVEL=INFO
 export RCLONE_VFS_CACHE_MODE=full

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o errexit -o nounset -o pipefail
+source Declare-BashScript "$0" "" "" "$@"
 
 sudo apt update 
 sudo apt install --yes curl gawk ipcalc jq
