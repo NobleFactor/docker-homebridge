@@ -3,5 +3,5 @@ services:
     volumes:
       - ./volumes/us-wa:/homebridge
     extends:
-      file: docker-compose.yaml
+      file: compose.yaml
       service: homebridge

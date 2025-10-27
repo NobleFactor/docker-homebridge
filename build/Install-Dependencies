@@ -3,5 +3,5 @@
 source Declare-BashScript "$0" "" "" "$@"
 
 sudo apt update 
-sudo apt install --yes curl gawk ipcalc jq
+sudo apt install --yes curl gawk grepcidr ipcalc jq
 sudo "$WORKSPACE/Personal/Tools/Debian/Install-Docker"

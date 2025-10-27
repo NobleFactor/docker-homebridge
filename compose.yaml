@@ -1,9 +1,9 @@
 services:
   homebridge:
-    image: noblefactor/homebridge:${NOBLEFACTOR_VERSION}
-    container_name: ${HOMEBRIDGE_HOSTNAME}
-    hostname: ${HOMEBRIDGE_HOSTNAME}
-    domainname: ${HOMEBRIDGE_DOMAIN_NAME}
+    image: ${HOMEBRIDGE_IMAGE}
+    container_name: ${CONTAINER_HOSTNAME}
+    hostname: ${CONTAINER_HOSTNAME}
+    domainname: ${CONTAINER_DOMAIN_NAME}
     networks:
       homebridge_network:
         ipv4_address: ${IP_ADDRESS}
@@ -13,7 +13,7 @@ services:
     devices:
       - /dev/fuse:/dev/fuse:rwm
     environment:
-      NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION: ${ISO_SUBDIVISION}
+      NOBLEFACTOR_CONTAINER_ISO_SUBDIVISION: ${ISO_SUBDIVISION}
     logging:
       driver: json-file
       options:
