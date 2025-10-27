@@ -205,6 +205,7 @@ docker_compose = sudo \
     CONTAINER_DOMAIN_NAME="$(CONTAINER_DOMAIN_NAME)" \
     ISO_SUBDIVISION="$(ISO_SUBDIVISION)" \
     NETWORK_NAME="$(network_name)" \
+    IP_ADDRESS="$(IP_ADDRESS)" \
     docker compose -f "$(project_file)" -f "$(project_networks_file)"
 
 ### RCLONE

@@ -6,7 +6,7 @@ services:
     domainname: ${CONTAINER_DOMAIN_NAME}
     networks:
       homebridge_network:
-        ipv4_address: ${IP_ADDRESS}
+        ipv4_address: ${IP_ADDRESS:-}
     restart: always
     cap_add:
       - SYS_ADMIN 
