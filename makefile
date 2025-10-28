@@ -6,7 +6,7 @@
 # TODO (david-noble) Reference SPDX document that references MIT and Homebridge software terms and conditions.
 # TODO (david-noble) Enable multi-platform builds as an option by adding a step to detect and create a multi-platform builder (See reference 3)
 
-SHELL := /usr/bin/bash
+SHELL := bash
 .SHELLFLAGS := -o errexit -o nounset -o pipefail -c
 .ONESHELL:
 
@@ -133,7 +133,7 @@ export USAGE
 ### ISO_SUBDIVISION
 
 ifeq ($(strip $(ISO_SUBDIVISION)),)
-    ISO_SUBDIVISION := $(shell curl --no-progress-meter "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"' | tr '[:upper:]' '[:lower:]')
+    ISO_SUBDIVISION := $(shell curl --fail --silent "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"' | tr '[:upper:]' '[:lower:]')
 else
     ISO_SUBDIVISION := $(shell echo $(ISO_SUBDIVISION) | tr '[:upper:]' '[:lower:]')
 endif
@@ -255,6 +255,8 @@ docker_compose := sudo \
 	NETWORK_NAME="$(network_name)" \
 	docker compose -f "$(project_file)" -f "$(project_networks_file)"
 
+.PHONY: help clean Get-HomebridgeStatus Mount-HomebridgeBackups New-Homebridge New-HomebridgeContainer New-HomebridgeImage Restart-Homebridge Start-Homebridge Start-HomebridgeShell Stop-Homebridge New-HomebridgeCertificates Update-HomebridgeCertificates Update-HomebridgeRcloneConf
+
 help:
 	@echo "$$USAGE"
 
@@ -268,20 +270,33 @@ clean:
 Get-HomebridgeStatus:
 	$(docker_compose) ps --all --format json --no-trunc | jq .
 
+Mount-HomebridgeBackups:
+
+	@declare -r mount_subcommand=$$([[ $(OS) == Darwin ]] && echo nfsmount || echo mount) 
+	@declare -r remote_path="onedrive:Homebridge/backups"
+	@declare -r mount_dir="HomebridgeBackups"
+	@declare -r rclone_log_file="$${mount_dir}/../HomebridgeBackups.rclone.log"
+
+	@mkdir --parents "$${mount_dir}"
+
+	@pids="$$(ps -eo pid=,args= | awk -v mount="$$mount_subcommand" -v remote="$$remote_path" -v mount_dir="$$mount_dir" 'index($$0, "rclone " mount " " remote " " mount_dir) { print $$1 }')"
+	@if [[ -n "$$pids" ]]; then
+		kill $$pids || true
+	fi
+
+	rclone "$${mount_subcommand}" "$${remote_path}" "$${mount_dir}" \
+		--vfs-cache-mode=full \
+		--daemon \
+		--log-level=DEBUG \
+		--log-file="$${rclone_log_file}" || true
+
+	@if [[ -f "$${rclone_log_file}" ]]; then
+		awk 'END{print}' "$${rclone_log_file}" || true
+	fi
+
 New-Homebridge: New-HomebridgeImage New-HomebridgeContainer
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
-
-New-HomebridgeImage:
-
-	sudo docker buildx build \
-		--build-arg homebridge_version=$(HOMEBRIDGE_VERSION) \
-		--load --progress=plain \
-		--tag "$(HOMEBRIDGE_IMAGE)" .
-
-
-	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Create Homebridge container in $(ISO_SUBDIVISION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file)
 
@@ -303,6 +318,14 @@ New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certif
 
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
+
+New-HomebridgeImage:
+	sudo docker buildx build \
+		--build-arg homebridge_version=$(HOMEBRIDGE_VERSION) \
+		--load --progress=plain \
+		--tag "$(HOMEBRIDGE_IMAGE)" .
+	@echo -e "\n\033[1mWhat's next:\033[0m"
+	@echo "    Create Homebridge container in $(ISO_SUBDIVISION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
 Restart-Homebridge:
 	$(docker_compose) restart

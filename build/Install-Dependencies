@@ -4,4 +4,16 @@ source Declare-BashScript "$0" "" "" "$@"
 
 sudo apt update 
 sudo apt install --yes curl gawk grepcidr ipcalc jq
-sudo "$WORKSPACE/Personal/Tools/Debian/Install-Docker"
+
+if [[ $(uname) == Linux ]]; then
+    declare -r distro=$(awk -F= '/^ID=/{print $2; exit}' /etc/os-release 2>/dev/null)
+
+    case $distro in
+    debian|ubuntu)
+        sudo "$WORKSPACE/Personal/Tools/Debian/Install-Docker"
+        ;;
+    esac
+
+fi
+
+sudo "$WORKSPACE/Personal/Tools/Install-Rclone"
