@@ -24,6 +24,8 @@ REQUIRED
                               IP range you specify does not conflict with your network's DHCP server. This may require
                               a change to the pool of addresses allocated by your DHCP server.
 
+                              Required by: New-HomebridgeContainer.
+
 OPTIONAL
     CONTAINER_DOMAIN_NAME     Override container domain name (default: localdomain)
     CONTAINER_ENVIRONMENT     Deployment environment: dev, test, prod (default: dev). Except for prod, whatever 
@@ -245,8 +247,6 @@ network_name := $(shell \
 
 ## TARGETS
 
-$(info ISO_SUBDIVISION = $(ISO_SUBDIVISION))
-
 docker_compose := sudo \
 	HOMEBRIDGE_IMAGE="$(HOMEBRIDGE_IMAGE)" \
 	ISO_SUBDIVISION="$(ISO_SUBDIVISION)" \
@@ -274,30 +274,33 @@ New-Homebridge: New-HomebridgeImage New-HomebridgeContainer
 
 New-HomebridgeImage:
 
-	@if [[ -z "$(IP_RANGE)" ]]; then
-		echo "An IP_RANGE is required. Take care to ensure it does not overlap with the pool of addresses managed by your DHCP Server."
-		exit 1		
-	fi
-
 	sudo docker buildx build \
 		--build-arg homebridge_version=$(HOMEBRIDGE_VERSION) \
 		--load --progress=plain \
 		--tag "$(HOMEBRIDGE_IMAGE)" .
 
-	New-DockerNetwork --device $(network_device) --driver $(network_driver) --ip-range $(IP_RANGE) homebridge
 
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Create Homebridge container in $(ISO_SUBDIVISION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file)
+
+	@if [[ -z "$(IP_RANGE)" ]]; then
+		echo "An IP_RANGE is required. Take care to ensure it does not overlap with the pool of addresses managed by your DHCP Server."
+		exit 1		
+	fi
+
 	@if [[ -n "$(IP_ADDRESS)" ]]; then
 		if ! grepcidr "$(IP_RANGE)" <(echo "$(IP_ADDRESS)") >/dev/null 2>&1; then
 			echo "Failure: $(IP_ADDRESS) is NOT in $(IP_RANGE)"
 			exit 1
 		fi
 	fi
+
+	$(docker_compose) stop && New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" --ip-range "$(IP_RANGE)" homebridge
 	$(docker_compose) create --force-recreate --pull never --remove-orphans
 	@sudo docker inspect "$(CONTAINER_HOSTNAME)"
+
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
