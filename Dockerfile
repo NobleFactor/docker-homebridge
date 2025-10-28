@@ -31,7 +31,7 @@ EOF
 RUN touch /noblefactor.init && chmod +x /noblefactor.init && cat > /noblefactor.init <<EOF
 #!/usr/bin/env bash
 
-set -o errexit -o nounset
+set -o errexit -o nounset -o pipefail
 
 export RCLONE_CACHE_DIR=/var/lib/rclone
 export RCLONE_CONFIG=/homebridge/.config/rclone.conf

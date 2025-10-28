@@ -13,7 +13,7 @@ services:
     devices:
       - /dev/fuse:/dev/fuse:rwm
     environment:
-      NOBLEFACTOR_CONTAINER_ISO_SUBDIVISION: ${ISO_SUBDIVISION}
+      NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION: ${ISO_SUBDIVISION}
     logging:
       driver: json-file
       options:

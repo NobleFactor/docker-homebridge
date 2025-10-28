@@ -176,15 +176,13 @@ endif
 
 export IP_RANGE
 
-## TAG
+## VARIABLES
+
+### PROJECT
 
 ifeq ($(strip $(TAG)),)
     TAG := 1.0.0-preview.1
 endif
-
-## VARIABLES
-
-### PROJECT
 
 project_name := homebridge
 project_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -195,23 +193,12 @@ ifeq ("$(wildcard $(project_file))","")
     $(error Project file for ISO_SUBDIVISION $(ISO_SUBDIVISION) does not exist: $(project_file))
 endif
 
-### FORWARD REFERENCES
-
-HOMEBRIDGE_IMAGE = noblefactor/$(project_name):$(TAG)
-
-docker_compose = sudo \
-    HOMEBRIDGE_IMAGE="$(HOMEBRIDGE_IMAGE)" \
-    CONTAINER_HOSTNAME="$(CONTAINER_HOSTNAME)" \
-    CONTAINER_DOMAIN_NAME="$(CONTAINER_DOMAIN_NAME)" \
-    ISO_SUBDIVISION="$(ISO_SUBDIVISION)" \
-    NETWORK_NAME="$(network_name)" \
-    IP_ADDRESS="$(IP_ADDRESS)" \
-    docker compose -f "$(project_file)" -f "$(project_networks_file)"
+HOMEBRIDGE_IMAGE := noblefactor/$(project_name):$(TAG)
 
 ### RCLONE
 
 rclone_conf_root := $(project_root)secrets
-rclone_conf_file:= $(rclone_conf_root)/rclone.conf
+rclone_conf_file := $(rclone_conf_root)/rclone.conf
 
 ### SECRETS
 
@@ -256,9 +243,17 @@ network_name := $(shell \
     len=$$((15 - $${#device})); \
     echo "$${project:0:$${len}}_$${device}")
 
-$(info network_name=$(network_name))
-
 ## TARGETS
+
+$(info ISO_SUBDIVISION = $(ISO_SUBDIVISION))
+
+docker_compose := sudo \
+	HOMEBRIDGE_IMAGE="$(HOMEBRIDGE_IMAGE)" \
+	ISO_SUBDIVISION="$(ISO_SUBDIVISION)" \
+	CONTAINER_HOSTNAME="$(CONTAINER_HOSTNAME)" \
+	CONTAINER_DOMAIN_NAME="$(CONTAINER_DOMAIN_NAME)" \
+	NETWORK_NAME="$(network_name)" \
+	docker compose -f "$(project_file)" -f "$(project_networks_file)"
 
 help:
 	@echo "$$USAGE"
@@ -271,7 +266,11 @@ clean:
 	sudo rm -rfv volumes/*
 
 Get-HomebridgeStatus:
-	$(docker_compose) ps --format json --no-trunc | jq .
+	$(docker_compose) ps --all --format json --no-trunc | jq .
+
+New-Homebridge: New-HomebridgeImage New-HomebridgeContainer
+	@echo -e "\n\033[1mWhat's next:\033[0m"
+	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeImage:
 
@@ -291,22 +290,14 @@ New-HomebridgeImage:
 	@echo "    Create Homebridge container in $(ISO_SUBDIVISION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file)
-
 	@if [[ -n "$(IP_ADDRESS)" ]]; then
 		if ! grepcidr "$(IP_RANGE)" <(echo "$(IP_ADDRESS)") >/dev/null 2>&1; then
 			echo "Failure: $(IP_ADDRESS) is NOT in $(IP_RANGE)"
 			exit 1
 		fi
 	fi
-
 	$(docker_compose) create --force-recreate --pull never --remove-orphans
 	@sudo docker inspect "$(CONTAINER_HOSTNAME)"
-
-	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
-
-New-Homebridge: New-HomebridgeImage New-HomebridgeContainer
-
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
@@ -323,7 +314,7 @@ Start-HomebridgeShell:
 
 Stop-Homebridge:
 	$(docker_compose) stop
-	make Get-HomebridgeStatus 
+	make Get-HomebridgeStatus
 
 New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf
 	cd "$(certificates_root)"
