@@ -43,8 +43,10 @@ if ! /usr/bin/rclone mount --daemon backups:Homebridge/backups/\${NOBLEFACTOR_HO
     echo "Rclone exit code: $?" && tail -3 /var/log/rclone/rclone.log
     exit 1
 fi
+
+exec /init
 EOF
 
 # RUNTIME ENVIRONMENT
 
-ENTRYPOINT /noblefactor.init && /init
+ENTRYPOINT [ "/noblefactor.init" ]
