@@ -1,0 +1,99 @@
+.TH HOMEBRIDGE-IMAGE 1 "October 2025" "Noble Factor" "User Commands"
+.SH NAME
+make \- Manage Homebridge deployment
+.SH SYNOPSIS
+.B make
+.I target
+.RI [ VAR=VALUE ... ]
+.SH DESCRIPTION
+The Homebridge image Makefile provides targets to build the Homebridge image, create and manage a container,
+operate its Docker network, and maintain secrets and backups.
+.PP
+Variables are supplied on the command line as \fBVAR=VALUE\fR assignments. Some variables are optional
+with sensible defaults; others are required for network creation.
+.SH VARIABLES
+.TP
+\fBIP_RANGE\fR (required)
+CIDR for the Docker network (e.g., 192.168.1.8/29). Ensure it does not conflict with your DHCP pool.
+Required by \fBNew-HomebridgeContainer\fR and \fBNew-Homebridge\fR.
+.TP
+\fBISO_SUBDIVISION\fR
+ISO 3166-2 subdivision code (e.g., us-wa). Defaults to auto-detection via the Docker host geo-location.
+.TP
+\fBCONTAINER_ENVIRONMENT\fR
+Deployment environment: dev, test, prod (default: dev). Non-prod values are appended to the default hostname.
+.TP
+\fBCONTAINER_DOMAIN_NAME\fR
+Container domain name (default: localdomain).
+.TP
+\fBCONTAINER_HOSTNAME\fR
+Container hostname (default: \fBhomebridge-ISO_SUBDIVISION[-CONTAINER_ENVIRONMENT]\fR).
+.TP
+\fBHOMEBRIDGE_VERSION\fR
+Upstream Homebridge version to build (default: latest).
+.TP
+\fBIP_ADDRESS\fR
+IPv4 address for the container (e.g., 192.168.1.10). Used during container creation. If omitted,
+Docker assigns an available address from \fBIP_RANGE\fR.
+.SH COMMANDS
+.TP
+\fBhelp\fR, \fBhelp-short\fR
+Show a brief, auto-generated summary of targets and descriptions.
+.TP
+\fBhelp-full\fR
+Show this manual page.
+.TP
+\fBNew-Homebridge\fR
+Build the image, ensure the network, and create the container.
+.TP
+\fBNew-HomebridgeImage\fR
+Build the Homebridge image only.
+.TP
+\fBNew-HomebridgeContainer\fR
+Create the container from an existing image; validates \fBIP_RANGE\fR and optional \fBIP_ADDRESS\fR, prepares volumes,
+creates/uses the macvlan/bridge network depending on host OS, and outputs inspect information.
+.TP
+\fBStart-Homebridge\fR / \fBStop-Homebridge\fR / \fBRestart-Homebridge\fR
+Start, stop, or restart the container via Docker Compose. Note: \fBIP_ADDRESS\fR is only used at creation time.
+.TP
+\fBGet-HomebridgeStatus\fR
+Display Docker Compose status (JSON) for the project.
+.TP
+\fBStart-HomebridgeShell\fR
+Open an interactive shell in the running container.
+.TP
+\fBMount-HomebridgeBackups\fR
+Mount the OneDrive backups folder to a local directory via rclone (daemon mode). Tails the last log line when available.
+.TP
+\fBNew-HomebridgeCertificates\fR
+Generate a self-signed certificate pair and CSR using the configuration at the subdivision's certificates directory.
+.TP
+\fBUpdate-HomebridgeCertificates\fR
+Copy generated certificates into the container's volume.
+.TP
+\fBUpdate-HomebridgeRcloneConf\fR
+Copy the \fBrclone.conf\fR secret into the container's volume.
+.TP
+\fBclean\fR
+Stop the container, remove the network, prune images/containers, and prune unused volumes. \fBDANGEROUS\fR.
+.SH FILES
+.TP
+\fIhomebridge-<subdivision>.yaml\fR
+Compose file for a specific ISO subdivision (e.g., \fIhomebridge-us-wa.yaml\fR).
+.TP
+\fIhomebridge.networks.yaml\fR
+Additional Compose networks configuration.
+.TP
+\fIsecrets/certificates/<subdivision>/*\fR
+Certificate configuration and generated artifacts.
+.TP
+\fIvolumes/<subdivision>/*\fR
+Container volumes including configs, backups, and persist directories.
+.SH NOTES
+- Network driver and device are auto-detected: macvlan on Linux, bridge on macOS.
+- Ensure \fBIP_RANGE\fR does not overlap with your DHCP pool.
+- \fBIP_ADDRESS\fR is validated to be inside \fBIP_RANGE\fR when provided.
+.SH SEE ALSO
+.BR docker (1),
+.BR docker-compose (1),
+.BR rclone (1)

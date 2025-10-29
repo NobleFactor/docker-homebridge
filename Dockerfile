@@ -24,17 +24,17 @@ RUN <<EOF
 set -o errexit
 apt-get update
 apt-get -y upgrade
-apt-get -y install avahi-daemon fuse3 kmod rclone
+apt-get -y install avahi-daemon fuse3 iproute2 kmod rclone
 mkdir /var/lib/rclone /var/log/rclone
 EOF
 
 RUN touch /noblefactor.init && chmod +x /noblefactor.init && cat > /noblefactor.init <<EOF
 #!/usr/bin/env bash
 
-set -o errexit -o nounset
+set -o errexit -o nounset -o pipefail
 
 export RCLONE_CACHE_DIR=/var/lib/rclone
-export RCLONE_CONFIG=/homebridge/.config/rclone/rclone.conf
+export RCLONE_CONFIG=/homebridge/.config/rclone.conf
 export RCLONE_LOG_FILE=/var/log/rclone/rclone.log
 export RCLONE_LOG_LEVEL=INFO
 export RCLONE_VFS_CACHE_MODE=full
@@ -43,8 +43,10 @@ if ! /usr/bin/rclone mount --daemon backups:Homebridge/backups/\${NOBLEFACTOR_HO
     echo "Rclone exit code: $?" && tail -3 /var/log/rclone/rclone.log
     exit 1
 fi
+
+exec /init
 EOF
 
 # RUNTIME ENVIRONMENT
 
-ENTRYPOINT /noblefactor.init && /init
+ENTRYPOINT [ "/noblefactor.init" ]
