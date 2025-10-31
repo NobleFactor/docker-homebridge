@@ -69,9 +69,9 @@ ifeq ($(strip $(TAG)),)
 endif
 
 project_name := homebridge
-project_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-project_file := $(project_root)$(project_name)-$(ISO_SUBDIVISION).yaml
-project_networks_file := $(project_root)$(project_name).networks.yaml
+project_root := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
+project_file := $(project_root)/$(project_name)-$(ISO_SUBDIVISION).yaml
+project_networks_file := $(project_root)/$(project_name).networks.yaml
 
 ifeq ("$(wildcard $(project_file))","")
     $(error Project file for ISO_SUBDIVISION $(ISO_SUBDIVISION) does not exist: $(project_file))
@@ -81,12 +81,11 @@ HOMEBRIDGE_IMAGE := noblefactor/$(project_name):$(TAG)
 
 ### RCLONE
 
-rclone_conf_root := $(project_root)secrets
-rclone_conf_file := $(rclone_conf_root)/rclone.conf
+rclone_conf_file := $(project_root)/secrets/rclone.conf
 
 ### SECRETS
 
-certificates_root := $(project_root)secrets/certificates/$(ISO_SUBDIVISION)
+certificates_root := $(project_root)/secrets/certificates/$(ISO_SUBDIVISION)
 
 certificates := \
 	$(certificates_root)/self-signed.csr\
@@ -95,7 +94,7 @@ certificates := \
 
 ### CONTAINER VOLUMES
 
-volume_root := $(project_root)volumes/$(ISO_SUBDIVISION)
+volume_root := $(project_root)/volumes/$(ISO_SUBDIVISION)
 
 container_backups := $(volume_root)/backups
 
@@ -148,7 +147,7 @@ help-short: ## Show brief help for annotated targets
 	@awk 'BEGIN {FS = ":.*##"; pad = $(HELP_COLWIDTH); print "Usage: make <target> [VAR=VALUE]"; print ""; print "Targets:"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-*s %s\n", pad, $$1, $$2} /^##@/ {printf "\n%s\n", substr($$0,5)}' $(MAKEFILE_LIST) | less -R
 
 help-full: ## Show detailed usage (man page)
-	@man -P 'less -R' -l "$(project_root)docs/homebridge-image.1"
+	@man -P 'less -R' -l "$(project_root)/docs/homebridge-image.1"
 
 ##@ Utilities
 clean: ## Stop, remove network, prune unused images/containers/volumes (DANGEROUS)
@@ -215,6 +214,7 @@ New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certif
 New-HomebridgeImage: ## Build the Homebridge image only
 	sudo docker buildx build \
 		--build-arg homebridge_version=$(HOMEBRIDGE_VERSION) \
+		--build-arg puid=$(shell id -u) \
 		--load --progress=plain \
 		--tag "$(HOMEBRIDGE_IMAGE)" .
 	@echo -e "\n\033[1mWhat's next:\033[0m"
@@ -238,8 +238,8 @@ Stop-Homebridge: ## Stop container
 ##@ Certificates and Secrets
 New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf ## Generate self-signed certificates
 	cd "$(certificates_root)"
-	openssl req -new -config certificate-request.conf -nodes -out self-signed.csr
-	openssl x509 -req -sha256 -days 365 -in self-signed.csr -signkey private-key.pem -out public-key.pem
+	openssl req -x509 -new -config certificate-request.conf -nodes -days 365 -out public-key.pem
+	openssl req -new -config certificate-request.conf -nodes -key private-key.pem -out self-signed.csr
 
 Update-HomebridgeCertificates: $(certificates) ## Copy certificates into container volume
 	mkdir --parent "$(volume_root)/.config/certificates"
