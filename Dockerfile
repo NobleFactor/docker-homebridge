@@ -35,7 +35,7 @@ ARG puid pgid
 #
 # Responsibilities
 # - rclone-backups-init: create /homebridge/.cache/rclone and /homebridge/backups after bind mounts; chown to homebridge
-# - rclone-backups-run:  exec s6-setuidgid homebridge rclone mount backups:Homebridge/backups/${NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION}
+# - rclone-backups-run:  exec s6-setuidgid homebridge rclone mount backups:Homebridge/backups/${NOBLEFACTOR_HOMEBRIDGE_LOCATION}
 #                        to /homebridge/backups with configured cache dir and log level
 # - rclone-backups-log:  capture logs via s6-log to /var/log/rclone (rotation: n20 s2000000 with timestamps)
 #
@@ -153,7 +153,7 @@ EOF
 RUN touch /etc/s6-overlay/s6-rc.d/rclone-backups-run/run && chmod +x /etc/s6-overlay/s6-rc.d/rclone-backups-run/run && cat > /etc/s6-overlay/s6-rc.d/rclone-backups-run/run <<EOF
 #!/command/with-contenv sh
 exec /command/s6-setuidgid homebridge /usr/bin/rclone mount \
-    "backups:Homebridge/backups/\${NOBLEFACTOR_HOMEBRIDGE_ISO_SUBDIVISION}" \
+    "backups:Homebridge/backups/\${NOBLEFACTOR_HOMEBRIDGE_LOCATION}" \
     "/homebridge/backups" \
     --config /homebridge/.config/rclone.conf \
     --cache-dir /homebridge/.cache/rclone \
