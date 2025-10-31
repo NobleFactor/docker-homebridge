@@ -56,8 +56,6 @@ endif
 
 ## IP_RANGE
 
-### Required; you must provide a value to construct the homebridge network
-
 export IP_RANGE
 
 ## VARIABLES

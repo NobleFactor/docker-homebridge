@@ -1,3 +1,14 @@
 /HomebridgeBackups.rclone.log
 /HomebridgeBackups/**
 /volumes/**
+
+# Exclude all certificate files from secrets directory
+secrets/**/*.pem
+secrets/**/*.csr
+secrets/**/*.crt
+secrets/**/*.key
+secrets/certificates/*/
+!secrets/certificates/*.template
+
+# Exclude rclone configuration
+secrets/rclone.conf
