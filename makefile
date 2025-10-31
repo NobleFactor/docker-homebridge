@@ -12,12 +12,12 @@ SHELL := bash
 
 ## PARAMETERS
 
-### ISO_SUBDIVISION
+### LOCATION
 
-ifeq ($(strip $(ISO_SUBDIVISION)),)
-    ISO_SUBDIVISION := $(shell curl --fail --silent "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"' | tr '[:upper:]' '[:lower:]')
+ifeq ($(strip $(LOCATION)),)
+    LOCATION := $(shell curl --fail --silent "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"' | tr '[:upper:]' '[:lower:]')
 else
-    ISO_SUBDIVISION := $(shell echo $(ISO_SUBDIVISION) | tr '[:upper:]' '[:lower:]')
+    LOCATION := $(shell echo $(LOCATION) | tr '[:upper:]' '[:lower:]')
 endif
 
 ### CONTAINER_ENVIRONMENT
@@ -41,7 +41,7 @@ endif
 ### CONTAINER_HOSTNAME
 
 ifeq ($(strip $(CONTAINER_HOSTNAME)),)
-	CONTAINER_HOSTNAME := homebridge-$(ISO_SUBDIVISION)$(hostname_suffix)
+	CONTAINER_HOSTNAME := homebridge-$(LOCATION)$(hostname_suffix)
 endif
 
 ### HOMEBRIDGE_VERSION
@@ -70,11 +70,11 @@ endif
 
 project_name := homebridge
 project_root := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
-project_file := $(project_root)/$(project_name)-$(ISO_SUBDIVISION).yaml
+project_file := $(project_root)/$(project_name)-$(LOCATION).yaml
 project_networks_file := $(project_root)/$(project_name).networks.yaml
 
 ifeq ("$(wildcard $(project_file))","")
-    $(error Project file for ISO_SUBDIVISION $(ISO_SUBDIVISION) does not exist: $(project_file))
+    $(error Project file for LOCATION $(LOCATION) does not exist: $(project_file))
 endif
 
 HOMEBRIDGE_IMAGE := noblefactor/$(project_name):$(TAG)
@@ -85,7 +85,7 @@ rclone_conf_file := $(project_root)/secrets/rclone.conf
 
 ### SECRETS
 
-certificates_root := $(project_root)/secrets/certificates/$(ISO_SUBDIVISION)
+certificates_root := $(project_root)/secrets/certificates/$(LOCATION)
 
 certificates := \
 	$(certificates_root)/self-signed.csr\
@@ -94,7 +94,7 @@ certificates := \
 
 ### CONTAINER VOLUMES
 
-volume_root := $(project_root)/volumes/$(ISO_SUBDIVISION)
+volume_root := $(project_root)/volumes/$(LOCATION)
 
 container_backups := $(volume_root)/backups
 
@@ -130,7 +130,7 @@ network_name := $(shell \
 
 docker_compose := sudo \
     HOMEBRIDGE_IMAGE="$(HOMEBRIDGE_IMAGE)" \
-    ISO_SUBDIVISION="$(ISO_SUBDIVISION)" \
+    LOCATION="$(LOCATION)" \
     CONTAINER_HOSTNAME="$(CONTAINER_HOSTNAME)" \
     CONTAINER_DOMAIN_NAME="$(CONTAINER_DOMAIN_NAME)" \
     NETWORK_NAME="$(network_name)" \
@@ -188,7 +188,7 @@ Mount-HomebridgeBackups: ## Mount OneDrive backups via rclone
 ##@ Build and Create
 New-Homebridge: New-HomebridgeImage New-HomebridgeContainer ## Build image and create container
 	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
+	@echo "    Start Homebridge in $(LOCATION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file) ## Create container from existing image and prepare volumes
 
@@ -209,7 +209,7 @@ New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certif
 	@sudo docker inspect "$(CONTAINER_HOSTNAME)"
 
 	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Start Homebridge in $(ISO_SUBDIVISION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
+	@echo "    Start Homebridge in $(LOCATION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeImage: ## Build the Homebridge image only
 	sudo docker buildx build \
@@ -218,7 +218,7 @@ New-HomebridgeImage: ## Build the Homebridge image only
 		--load --progress=plain \
 		--tag "$(HOMEBRIDGE_IMAGE)" .
 	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Create Homebridge container in $(ISO_SUBDIVISION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
+	@echo "    Create Homebridge container in $(LOCATION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
 Restart-Homebridge: ## Restart container
 	$(docker_compose) restart
@@ -245,13 +245,13 @@ Update-HomebridgeCertificates: $(certificates) ## Copy certificates into contain
 	mkdir --parent "$(volume_root)/.config/certificates"
 	cp --verbose $(certificates) "$(volume_root)/.config/certificates"
 	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) loads new certificates: make Restart-Homebridge"
+	@echo "    Ensure that Homebridge in $(LOCATION) loads new certificates: make Restart-Homebridge"
 
 Update-HomebridgeRcloneConf: $(rclone_conf_file) ## Copy rclone.conf into container volume
 	mkdir --parent "$(volume_root)/.config"
 	cp --verbose $(rclone_conf_file) "$(volume_root)/.config"
 	@echo -e "\n\033[1mWhat's next:\033[0m"	
-	@echo "    Ensure that Homebridge in $(ISO_SUBDIVISION) reconfigures rclone: make Restart-Homebridge ISO_SUBDIVISION=$(ISO_SUBDIVISION)"
+	@echo "    Ensure that Homebridge in $(LOCATION) reconfigures rclone: make Restart-Homebridge LOCATION=$(LOCATION)"
 
 ## BUILD RULES
 
