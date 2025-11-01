@@ -1,0 +1,112 @@
+.TH NEW-DOCKERNETWORK 1 "October 2025" "Noble Factor" "User Commands"
+.SH NAME
+New-DockerNetwork \- create a docker network using Noble Factor conventions
+.SH SYNOPSIS
+.B New-DockerNetwork
+[\fB\-h\fR|\fB\-\-help\fR]
+[\fB\-\-device\fR=\fIDEVICE-NAME\fR]
+[\fB\-d\fR|\fB\-\-driver\fR=\fIDRIVER-NAME\fR]
+[\fB\-\-ip-range\fR=\fIIP-RANGE\fR]
+\fISERVICE-NAME\fR
+.SH DESCRIPTION
+Create a docker network using Noble Factor conventions. The network is named as 
+\fISERVICE-NAME\fB:\fIDEVICE-NAME\fR. If you do not specify a device name, the 
+default device name is used. On Linux, the default is obtained from the operating 
+system using \fBip route show default\fR. On macOS, the default is obtained from the 
+operating system using \fBscutil --dns\fR.
+.PP
+Note that IPv6 and macvlan networks can only be created on Linux hosts.
+.SH OPTIONS
+.TP
+\fISERVICE-NAME\fR
+A docker service name.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print this text and exit.
+.TP
+\fB\-d\fR, \fB\-\-device\fR=\fIDEVICE-NAME\fR
+Parent network device name. Default: On Linux, the primary network interface as
+reported by \fBip route show default\fR. On macOS, the primary 
+network interface as returned by \fBscutil --dns\fR.
+.TP
+\fB\-D\fR, \fB\-\-driver\fR=\fIDRIVER-NAME\fR
+Driver type. Default: macvlan.
+.TP
+\fB\-\-ip\-range\fR=\fIIP-RANGE\fR
+Allocate container IPv4 addresses from a CIDR block. Example: 192.168.8/29 which
+allocates a block of 5 IP addresses in the range [9,14]. \fBipcalc\fR is a convenient
+tool for computing CIDR block values. By default \fBdocker\fR allocates container
+addresses from the entire IPv4 subnet. Ensure that the CIDR block you specify is unused by,
+for example, your local DHCP server.
+.SH BEHAVIOR
+The script automatically:
+.IP \(bu 2
+Detects the operating system (Darwin/macOS or GNU/Linux)
+.IP \(bu 2
+Determines the default network interface if not specified
+.IP \(bu 2
+Calculates IPv4 subnet and gateway information
+.IP \(bu 2
+On GNU/Linux: Also configures IPv6 networking
+.IP \(bu 2
+Removes any existing network with the same name
+.IP \(bu 2
+Creates the new network with appropriate settings
+.IP \(bu 2
+Displays the network configuration upon completion
+.SH EXAMPLES
+.TP
+Create a network for a web service using default settings:
+.B New-DockerNetwork web-service
+.TP
+Create a network using a specific device on Linux:
+.B New-DockerNetwork --device=wlan0 api-service
+.TP
+Create a network with bridge driver:
+.B New-DockerNetwork --driver=bridge --device=eth1 database
+.SH PLATFORM DIFFERENCES
+.TP
+.B macOS (Darwin)
+\(bu Uses "scutil --dns" to determine default interface
+.br
+\(bu IPv4-only network configuration
+.br
+\(bu Uses ipcalc and ifconfig for network calculations
+.TP
+.B GNU/Linux
+\(bu Uses \fBip route show default\fR to determine default interface
+.br
+\(bu Supports both IPv4 and IPv6 networking
+.br
+\(bu Uses nmcli for network information gathering
+.SH EXIT STATUS
+.TP
+0
+Success
+.TP
+1
+Error (invalid arguments, unsupported OS, network creation failure, etc.)
+.SH DEPENDENCIES
+.TP
+.B Required commands:
+docker, sudo, getopt, uname
+.TP
+.B macOS specific:
+scutil, ipcalc, ifconfig, traceroute
+.TP
+.B GNU/Linux specific:
+nmcli, ipcalc
+.SH FILES
+.TP
+.I Declare-BashScript
+Sourced utility script for argument parsing and error handling
+.SH AUTHOR
+Noble Factor
+.SH SEE ALSO
+.BR docker-network-create (1),
+.BR docker-network (1),
+.BR docker (1),
+.BR ip (8)
+.BR nmcli (1),
+.BR scutil (8),
+.BR ipcalc (1)

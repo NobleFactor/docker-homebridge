@@ -56,8 +56,6 @@ endif
 
 ## IP_RANGE
 
-### Required; you must provide a value to construct the homebridge network
-
 export IP_RANGE
 
 ## VARIABLES
@@ -88,7 +86,7 @@ rclone_conf_file := $(project_root)/secrets/rclone.conf
 certificates_root := $(project_root)/secrets/certificates/$(LOCATION)
 
 certificates := \
-	$(certificates_root)/self-signed.csr\
+	$(certificates_root)/certificate-request.conf\
 	$(certificates_root)/private-key.pem\
 	$(certificates_root)/public-key.pem
 
@@ -99,7 +97,6 @@ volume_root := $(project_root)/volumes/$(LOCATION)
 container_backups := $(volume_root)/backups
 
 container_certificates := \
-	$(volume_root)/.config/certificates/self-signed.csr\
 	$(volume_root)/.config/certificates/private-key.pem\
 	$(volume_root)/.config/certificates/public-key.pem
 
@@ -236,18 +233,18 @@ Stop-Homebridge: ## Stop container
 	make Get-HomebridgeStatus
 
 ##@ Certificates and Secrets
-New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf ## Generate self-signed certificates
+New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf ## Generate self-signed certificates for LOCATION
 	cd "$(certificates_root)"
 	openssl req -x509 -new -config certificate-request.conf -nodes -days 365 -out public-key.pem
 	openssl req -new -config certificate-request.conf -nodes -key private-key.pem -out self-signed.csr
 
-Update-HomebridgeCertificates: $(certificates) ## Copy certificates into container volume
+Update-HomebridgeCertificates: $(certificates) ## Copy certificates into container volume for LOCATION
 	mkdir --parent "$(volume_root)/.config/certificates"
 	cp --verbose $(certificates) "$(volume_root)/.config/certificates"
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Ensure that Homebridge in $(LOCATION) loads new certificates: make Restart-Homebridge"
 
-Update-HomebridgeRcloneConf: $(rclone_conf_file) ## Copy rclone.conf into container volume
+Update-HomebridgeRcloneConf: $(rclone_conf_file) ## Copy rclone.conf into container volume for LOCATION
 	mkdir --parent "$(volume_root)/.config"
 	cp --verbose $(rclone_conf_file) "$(volume_root)/.config"
 	@echo -e "\n\033[1mWhat's next:\033[0m"	

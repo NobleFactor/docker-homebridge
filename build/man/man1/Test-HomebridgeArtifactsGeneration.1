@@ -1,0 +1,38 @@
+.TH Test-HomebridgeArtifactsGeneration 1 "31 October 2025" "NobleFactor" "Homebridge Artifact Testing"
+.SH NAME
+Test-HomebridgeArtifactsGeneration \- Automated test for Homebridge artifact and certificate generation
+.SH SYNOPSIS
+.B Test-HomebridgeArtifactsGeneration
+\fB--location\fR <location> [\fB--template-dir\fR <dir>] [\fB--help\fR]
+.SH DESCRIPTION
+This script compares generated Homebridge artifacts to baseline reference files.
+.PP
+- The generated YAML file is always './homebridge-<location>.yaml'.
+- The baseline YAML file is './test/baseline/homebridge-<location>.yaml'.
+- The generated secrets directory is './secrets/<location>'.
+- The baseline secrets directory is './test/baseline/<location>'.
+- Field-by-field comparisons are performed for certificate artifacts.
+- The template directory defaults to '.' but can be overridden.
+.SH OPTIONS
+.TP
+.B --location <location>
+Location name (e.g., 'fake-wa')
+.TP
+.B --template-dir <dir>
+Directory containing templates (default: '.')
+.TP
+.B --help
+Show usage information
+.SH EXAMPLES
+.PP
+Run the test for location 'fake-wa':
+.IP
+Test-HomebridgeArtifactsGeneration --location fake-wa
+.PP
+Override the template directory:
+.IP
+Test-HomebridgeArtifactsGeneration --location fake-wa --template-dir ./templates
+.SH AUTHOR
+NobleFactor
+.SH DATE
+31 October 2025

@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+
+########################################################################################################################
+# Licensed under the MIT License - see LICENSE file for details.
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+# New-HomebridgeLocation - Generates Homebridge artifacts and certificates.
+########################################################################################################################
+
+source "$(dirname "$0")/Declare-BashScript" "$0" "location:,country-code:,state-or-province:,city:,organization-name:,organizational-unit:,domain-name:,email-address:,env-file:" "l:c:s:C:O:U:D:E:F:" "$@"
+
+###########
+# Constants
+###########
+
+declare -r secrets_dir="secrets/certificates/${LOCATION:-us-wa}"
+declare -r yaml_file="homebridge-${LOCATION:-us-wa}.yaml"
+
+###########
+# Functions
+###########
+
+set_env_from_file() {
+
+    local allowed_vars=( LOCATION COUNTRY_CODE STATE_OR_PROVINCE CITY ORGANIZATION_NAME ORGANIZATIONAL_UNIT DOMAIN_NAME EMAIL_ADDRESS )
+    local env_file="$1"
+
+    if [[ ! -f "$env_file" ]]; then
+        error 1 "Environment file not found: $env_file"
+    fi
+
+    while IFS='=' read -r key value; do
+        [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue # Skip comments and empty lines
+        # Remove surrounding quotes from value, but do not eval or run code
+        value="${value%\"}"
+        value="${value#\"}"
+        local recognized=false
+        for var in "${allowed_vars[@]}"; do
+            if [[ "$key" == "$var" ]]; then
+                export "$key"="$value"
+                recognized=true
+                break
+            fi
+        done
+        if [[ "$recognized" == false ]]; then
+            note "Unrecognized environment variable in $env_file: $key"
+        fi
+    done < "$env_file"
+}
+
+###########
+# Arguments
+###########
+
+eval set -- "$script_arguments"
+
+[[ $* != -- ]] || usage
+
+while :; do
+    case $1 in
+        -h|--help)
+            usage; # does not return
+            shift 1
+            ;;
+        --env-file)
+            env_file="$2"
+            if [[ ! -f "$env_file" ]]; then
+                error 1 "Environment file not found: $env_file"
+            fi
+            set_env_from_file "$env_file"
+            shift 2
+            ;;
+        --location)
+            export LOCATION="$2"
+            shift 2
+            ;;
+        --country-code)
+            export COUNTRY_CODE="$2"
+            shift 2
+            ;;
+        --state-or-province)
+            export STATE_OR_PROVINCE="$2"
+            shift 2
+            ;;
+        --city)
+            export CITY="$2"
+            shift 2
+            ;;
+        --organization-name)
+            export ORGANIZATION_NAME="$2"
+            shift 2
+            ;;
+        --organizational-unit)
+            export ORGANIZATIONAL_UNIT="$2"
+            shift 2
+            ;;
+        --domain-name)
+            export DOMAIN_NAME="$2"
+            shift 2
+            ;;
+        --email-address)
+            export EMAIL_ADDRESS="$2"
+            shift 2
+            ;;
+        --)
+            shift 1
+            break
+            ;;
+        *)
+            error 1 "Unrecognized option: $1"
+            ;;
+    esac
+done
+
+if [[ -z "${LOCATION:-}" ]]; then error 1 "Missing value for location"; fi
+if [[ -z "${COUNTRY_CODE:-}" ]]; then error 1 "Missing value for country-code"; fi
+if [[ -z "${STATE_OR_PROVINCE:-}" ]]; then error 1 "Missing value for state-or-province"; fi
+if [[ -z "${CITY:-}" ]]; then error 1 "Missing value for city"; fi
+if [[ -z "${ORGANIZATION_NAME:-}" ]]; then error 1 "Missing value for organization-name"; fi
+if [[ -z "${ORGANIZATIONAL_UNIT:-}" ]]; then error 1 "Missing value for organizational-unit"; fi
+if [[ -z "${DOMAIN_NAME:-}" ]]; then error 1 "Missing value for domain-name"; fi
+if [[ -z "${EMAIL_ADDRESS:-}" ]]; then error 1 "Missing value for email-address"; fi
+
+###########
+# Main
+###########
+
+mkdir -p "$secrets_dir"
+
+envsubst < secrets/certificates/certificate-request.conf.template > "$secrets_dir/certificate-request.conf"
+envsubst < homebridge.yaml.template > "$yaml_file"
+
+note "Generated:"
+note "  $secrets_dir/certificate-request.conf"
+note "  $yaml_file"
+
+# Save exported environment variables to homebridge-$(LOCATION).env
+env_file="homebridge-${LOCATION}.env"
+
+cat > "$env_file" <<EOF
+LOCATION="${LOCATION}"
+COUNTRY_CODE="${COUNTRY_CODE}"
+STATE_OR_PROVINCE="${STATE_OR_PROVINCE}"
+CITY="${CITY}"
+ORGANIZATION_NAME="${ORGANIZATION_NAME}"
+ORGANIZATIONAL_UNIT="${ORGANIZATIONAL_UNIT}"
+DOMAIN_NAME="${DOMAIN_NAME}"
+EMAIL_ADDRESS="${EMAIL_ADDRESS}"
+EOF
+
+note "Saved environment variables to $env_file"

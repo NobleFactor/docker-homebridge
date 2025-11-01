@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+########################################################################################################################
+# Licensed under the MIT License - see LICENSE file for details.
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+# Install-Rclone - Installs the current Rclone release and sets up mount commands.
+########################################################################################################################
+
+# Installs the current Rclone release. This is likely newer than the one the release in the Debian-based system repos.
+# After installing, use 'rclone selfupdate' to upgrade rclone.
+
+source "$(dirname "$0")/Declare-BashScript" "$0" "help" "h" "$@"
+
+###########
+# Arguments
+###########
+
+eval set -- "$script_arguments"
+[[ $* != -- ]] || usage
+
+while :; do
+    case "$1" in
+        -h|--help)
+            usage; # does not return
+            shift 1
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+    [[ $# -eq 0 ]] && break
+
+done
+
+###########
+# Main
+###########
+
+declare -r platform="linux-${OSARCH}"
+
+curl -O https://downloads.rclone.org/rclone-current-${platform}.zip
+unzip rclone-current-${platform}.zip
+
+if dpkg -s rclone | grep installed; then
+    sudo apt remove rclone
+fi
+
+# Install binary
+
+sudo cp rclone-*-${platform}/rclone /usr/bin/
+sudo chown root:root /usr/bin/rclone
+sudo chmod 755 /usr/bin/rclone
+sudo mkdir -p /var/lib/rclone /var/log/rclone
+
+# Install man page
+
+sudo mkdir -p /usr/local/share/man/man1
+sudo cp rclone-*-${platform}/rclone.1 /usr/local/share/man/man1/
+sudo mandb
+
+rm -rf rclone-*-${platform} rclone-current-${platform}.zip
+
+# Enable mount commands: 
+#   mount <remote>:<path> <mount-point> --types rclone\ 
+#    --options config=<rclone_config>,cache-dir=<cache-dir>,vfs_cache_mode=full[,...]
+
+sudo ln -fs /usr/bin/rclone /sbin/mount.rclone

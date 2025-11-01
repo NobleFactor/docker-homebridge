@@ -159,6 +159,7 @@ exec /command/s6-setuidgid homebridge /usr/bin/rclone mount \
     --cache-dir /homebridge/.cache/rclone \
     --vfs-cache-mode full \
     --allow-non-empty \
+    --allow-other \
     --log-level INFO
 EOF
 

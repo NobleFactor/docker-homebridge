@@ -1,7 +1,7 @@
 services:
   homebridge:
     volumes:
-      - ./volumes/us-wa:/homebridge
+      - ./volumes/${LOCATION}:/homebridge
     extends:
       file: compose.yaml
       service: homebridge
