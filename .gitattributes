@@ -1,13 +1,10 @@
 ###############################################################################
-# Encrypted secrets
+# Repository attributes
+#
+# Note: git-crypt filters have been removed. Secrets and certificates are now
+# excluded via .gitignore and generated locally during builds/tests.
+# This file is intentionally minimal.
 ###############################################################################
 
-/secrets/** filter=git-crypt diff=git-crypt
-
-*.key filter=git-crypt diff=git-crypt
-*.pem filter=git-crypt diff=git-crypt
-*.p12 filter=git-crypt diff=git-crypt
-*.pfx filter=git-crypt diff=git-crypt
-
-# Guard against encrypting .gitattributes files
-.gitattributes !filter !diff
+# Ensure attributes file itself is always treated as plain text
+.gitattributes -text
