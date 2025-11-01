@@ -71,9 +71,7 @@ project_root := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 project_file := $(project_root)/$(project_name)-$(LOCATION).yaml
 project_networks_file := $(project_root)/$(project_name).networks.yaml
 
-ifeq ("$(wildcard $(project_file))","")
-    $(error Project file for LOCATION $(LOCATION) does not exist: $(project_file))
-endif
+# Compose file may not exist initially; targets below will ensure generation when needed.
 
 HOMEBRIDGE_IMAGE := noblefactor/$(project_name):$(TAG)
 
@@ -135,7 +133,7 @@ docker_compose := sudo \
 
 HELP_COLWIDTH ?= 28
 
-.PHONY: help help-short help-full clean Get-HomebridgeStatus Mount-HomebridgeBackups New-Homebridge New-HomebridgeContainer New-HomebridgeImage Restart-Homebridge Start-Homebridge Start-HomebridgeShell Stop-Homebridge New-HomebridgeCertificates Update-HomebridgeCertificates Update-HomebridgeRcloneConf
+.PHONY: help help-short help-full clean Get-HomebridgeStatus Mount-HomebridgeBackups New-HomebridgeLocation New-Homebridge New-HomebridgeContainer New-HomebridgeImage Restart-Homebridge Start-Homebridge Start-HomebridgeShell Stop-Homebridge New-HomebridgeCertificates Update-HomebridgeCertificates Update-HomebridgeRcloneConf
 
 ##@ Help
 help: help-short ## Show brief help (alias: help-short)
@@ -153,8 +151,22 @@ clean: ## Stop, remove network, prune unused images/containers/volumes (DANGEROU
 	sudo docker system prune --force --all
 	sudo docker volume prune --force --all
 
+## Ensure LOCATION artifacts exist or are up-to-date vs env
+New-HomebridgeLocation: ## Ensure location files exist; generate if missing or older than homebridge-$(LOCATION).env
+	@env_file="$(project_root)/homebridge-$(LOCATION).env"; \
+	if [[ ! -f "$$env_file" ]]; then \
+		echo "Missing environment file: $$env_file"; \
+		exit 1; \
+	fi; \
+	regen=0; \
+	if [[ ! -f "$(project_file)" || "$(project_file)" -ot "$$env_file" ]]; then regen=1; fi; \
+	if [[ ! -f "$(certificates_root)/certificate-request.conf" || "$(certificates_root)/certificate-request.conf" -ot "$$env_file" ]]; then regen=1; fi; \
+	if (( regen )); then \
+		build/New-HomebridgeLocation --env-file="$$env_file"; \
+	fi
+
 ##@ Lifecycle
-Get-HomebridgeStatus: ## Show compose status (JSON)
+Get-HomebridgeStatus: $(project_file) ## Show compose status (JSON)
 	$(docker_compose) ps --all --format json --no-trunc | jq .
 
 ##@ Backups
@@ -187,7 +199,7 @@ New-Homebridge: New-HomebridgeImage New-HomebridgeContainer ## Build image and c
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Start Homebridge in $(LOCATION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
-New-HomebridgeContainer: $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file) ## Create container from existing image and prepare volumes
+New-HomebridgeContainer: $(project_file) $(certificates_root)/certificate-request.conf $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file) ## Create container from existing image and prepare volumes
 
 	@if [[ -z "$(IP_RANGE)" ]]; then
 		echo "An IP_RANGE is required. Take care to ensure it does not overlap with the pool of addresses managed by your DHCP Server."
@@ -217,18 +229,18 @@ New-HomebridgeImage: ## Build the Homebridge image only
 	@echo -e "\n\033[1mWhat's next:\033[0m"
 	@echo "    Create Homebridge container in $(LOCATION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
-Restart-Homebridge: ## Restart container
+Restart-Homebridge: $(project_file) $(certificates_root)/certificate-request.conf ## Restart container
 	$(docker_compose) restart
 	make Get-HomebridgeStatus
  
-Start-Homebridge: ## Start container
+Start-Homebridge: $(project_file) $(certificates_root)/certificate-request.conf ## Start container
 	$(docker_compose) start
 	make Get-HomebridgeStatus
 
 Start-HomebridgeShell: ## Open interactive shell in the container
 	sudo docker exec --interactive --tty ${CONTAINER_HOSTNAME} /bin/bash
 
-Stop-Homebridge: ## Stop container
+Stop-Homebridge: $(project_file) $(certificates_root)/certificate-request.conf ## Stop container
 	$(docker_compose) stop
 	make Get-HomebridgeStatus
 
@@ -252,7 +264,7 @@ Update-HomebridgeRcloneConf: $(rclone_conf_file) ## Copy rclone.conf into contai
 
 ## BUILD RULES
 
-$(certificates):
+$(certificates_root)/private-key.pem $(certificates_root)/public-key.pem:
 	make New-HomebridgeCertificates
 
 $(container_backups):
@@ -263,3 +275,26 @@ $(container_certificates): $(certificates)
 
 $(container_rclone_conf_file): $(rclone_conf_file)
 	make Update-HomebridgeRcloneConf
+
+## Location artifact rules: if missing or stale vs env/templates, (re)generate via New-HomebridgeLocation
+env_file := $(project_root)/homebridge-$(LOCATION).env
+env_stamp := $(project_root)/.env-$(LOCATION).stamp
+compose_template := $(project_root)/homebridge.yaml.template
+certreq_template := $(project_root)/secrets/certificates/certificate-request.conf.template
+
+# Friendly guidance when the env file is missing
+$(env_file):
+	@echo "Missing environment file: $@"; \
+	 echo "Create it or symlink it into the project root (e.g., from test/baseline)."; \
+	 echo "Expected path: $(project_root)/homebridge-$(LOCATION).env"; \
+	 exit 1
+
+# Stamp file tracks env freshness without requiring the env to be a hard prerequisite
+$(env_stamp): $(env_file)
+	@touch "$@"
+
+$(project_file): $(compose_template) $(env_stamp)
+	$(MAKE) New-HomebridgeLocation
+
+$(certificates_root)/certificate-request.conf: $(certreq_template) $(env_stamp)
+	$(MAKE) New-HomebridgeLocation
