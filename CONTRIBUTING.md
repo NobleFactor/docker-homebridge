@@ -1,127 +1,112 @@
 # Contributing to docker-homebridge
 
+# Contributing to docker-homebridge
 
-## Shell Script and Automation Standards
+Welcome. This guide is for humans contributing to this repository. Automation-specific rules live in `.github/COPILOT_INSTRUCTIONS.md`.
 
-All contributors, bots, and automation agents must follow these conventions for shell scripts and project automation:
+## How we work (short version)
 
-### Bash Script Declaration Template
+1) Propose first. Open an issue or draft PR with the exact patch (a unified diff) and a short rationale.
 
-All new bash scripts should begin with the following declaration pattern, as exemplified in `build/New-HomebridgeLocation` and `test/Test-HomebridgeArtifactsGeneration`:
+2) Get approval. Wait for explicit owner approval before editing anything.
 
+3) Keep it tight. Apply only the approved diff. No drive‑by formatting, comment rewrites, or unrelated changes.
+
+4) Explain and verify. Write a clear commit message (why + what) and include how you verified it.
+
+## Pull requests
+
+- Use focused PRs. Small, single‑purpose changes are easier to review and roll back.
+- Follow the PR template checklist. Show pre‑approval, scope control, and validation steps.
+- Prefer conventional commits for messages (e.g., `fix: ...`, `feat: ...`, `docs: ...`).
+- Link issues where relevant.
+
+## Development setup
+
+- Use Make targets instead of raw Docker commands when possible.
+    - Examples: `make New-HomebridgeImage`, `make Start-Homebridge`.
+- Scripts use bash with strict flags; many source `build/Declare-BashScript` which manages shell options.
+
+## Shell scripts: standards and template
+
+Write clear, minimal, option‑driven scripts. Prefer long‑form options for readability.
+
+Script header template:
 
 ```bash
 #!/usr/bin/env bash
 
-source ../build/Declare-BashScript "$0" "arg1:,arg2:,help" "" "$@"
-
-```bash
-#!/usr/bin/env bash
-
-# <ScriptName>: <Short description of what the script does>
+# <ScriptName>: <Short description>
 #
 # USAGE:
 #   ./<ScriptName> [--arg1 <value>] [--arg2 <value>] ...
 #
 # DESCRIPTION:
-#   <Detailed description of script workflow, conventions, and expected behavior>
+#   <Brief workflow and expectations>
 #
 # ARGUMENTS:
-#   --arg1 <value>   Description of arg1
-#   --arg2 <value>   Description of arg2
-#   --help           Show usage information
-#
-source ../build/Declare-BashScript "$0" "arg1:,arg2:,help" "" "$@"
+#   --arg1 <value>  Description
+#   --arg2 <value>  Description
+#   --help          Show usage
 
+source ../build/Declare-BashScript "$0" "arg1:,arg2:,help" "" "$@"
 eval set -- "$script_arguments"
 
 [[ $* != -- ]] || usage
 
 while :; do
     case "$1" in
-        -h|--help)
-            usage; # does not return
-            shift 1
-            ;;
-        --arg1)
-            export ARG1="$2"
-            shift 2
-            ;;
-        --arg2)
-            export ARG2="$2"
-            shift 2
-            ;;
-        --)
-            shift
-            break
-            ;;
-        *)
-            break
-            ;;
+        -h|--help) usage; shift ;;
+        --arg1) ARG1="$2"; shift 2 ;;
+        --arg2) ARG2="$2"; shift 2 ;;
+        --) shift; break ;;
+        *) break ;;
     esac
     [[ $# -eq 0 ]] && break
 done
 
-# Example processing loop with case statement
-for item in "${items[@]}"; do
-    case "$item" in
-        arg1)
-            echo "Processing arg1 logic"
-            ;;
-        arg2)
-            echo "Processing arg2 logic"
-            ;;
-        *)
-            echo "Unknown item: $item"
-            ;;
-    esac
-done
+# ...script body...
 ```
-- Use explicit, descriptive long option names (e.g., `--test-location`).
-- Avoid ambiguous or generic argument names.
 
-### Default Values
-- Default test location is `fake-wa` unless overridden by the user.
+Guidelines:
 
-### Template Paths
-- Hardwire template paths in scripts; do not use a `template_dir` argument.
-- Use project-root-relative paths for templates:
-  - `./homebridge.yaml.template`
-  - `./secrets/certificates/certificate-request.conf.template`
+- Use explicit, descriptive long options (e.g., `--test-location`).
+- Defaults: test location defaults to `fake-wa` unless overridden.
+- Template paths are project‑root relative and hard‑wired:
+    - `./homebridge.yaml.template`
+    - `./secrets/certificates/certificate-request.conf.template`
+- Generated artifacts live in `./` and `./secrets/<test-location>`.
+- Baselines live in `./test/baseline/<test-location>` and `./test/baseline/homebridge-<test-location>.yaml`.
+- If a script sources `Declare-BashScript`, don’t add another `set -euo pipefail`—it’s already handled.
+- Keep variables/args minimal—include only what’s required for logic and comparison.
+- Document arguments, defaults, and file layout in the header and the man page.
 
-### Directory Structure
-- Generated artifacts are always in the project root (`.`) and `./secrets/<test-location>`.
-- Baseline artifacts are always in `./test/baseline/<test-location>` and `./test/baseline/homebridge-<test-location>.yaml`.
+## Tests
 
-### Shell Options
-- Do not add `set -euo pipefail` to scripts that source `Declare-BashScript`, as it already manages shell options.
+The `test/Test-HomebridgeArtifactsGeneration` script compares generated artifacts to baselines.
 
-### Minimalism
-- Remove all unnecessary variables and arguments from scripts.
-- Only keep variables required for logic and comparison.
-
-### Documentation
-- Clearly document argument usage, default values, and directory structure in script headers and man pages.
-
-## Test Script Reference
-
-The `Test-HomebridgeArtifactsGeneration` script compares generated Homebridge artifacts to baseline reference files:
-
+It checks:
 - Generated YAML: `./homebridge-<test-location>.yaml`
 - Baseline YAML: `./test/baseline/homebridge-<test-location>.yaml`
 - Generated secrets: `./secrets/<test-location>`
 - Baseline secrets: `./test/baseline/<test-location>`
-- Field-by-field comparisons for certificate artifacts
-- Template files are always at the project root
+- Field‑by‑field comparisons for certificate artifacts
 
-#### Example Usage
+Example:
 
 ```sh
 ./Test-HomebridgeArtifactsGeneration --test-location fake-wa
 ```
 
-## Man Page Requirement
+## Man pages
 
-All scripts in this repository must include a man page in groff format (section 1), located in the appropriate `test/man/man.1/` directory. Man pages should document usage, arguments, workflow, and conventions. These man pages must be able to be generated automatically by any chatbot or automation agent, ensuring documentation is always up-to-date and reproducible.
+All build scripts must include a groff section‑1 man page under `build/man/man.1/` documenting usage, arguments, workflow, and conventions. All test scripts should include a groff seciotn-1 man page under `test/man/man.1`. Copilot and other AI chat bots do a great job of producing usable man pages, bash completions, and zsh completions. It makes this requirement possible.
 
-All Copilot agents, chatbots, and contributors must adhere to these standards for consistency and maintainability.
+## Change control
+
+- Propose the exact patch and wait for approval before editing.
+- Keep diffs minimal and on‑topic.
+- Describe validation steps; prefer reproducible commands or tests.
+
+Automation rules are defined separately in `.github/COPILOT_INSTRUCTIONS.md`.
+```
