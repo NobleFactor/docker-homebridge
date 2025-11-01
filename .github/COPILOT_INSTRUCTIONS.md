@@ -2,6 +2,12 @@
 
 ## Development Guidelines
 
+### Change Control (MANDATORY)
+- Do not modify files unless the user explicitly requests an edit and approves the exact patch.
+- Always present a proposed patch first (filename, before/after context). Apply only after explicit approval.
+- Do not commit or run commands unless asked to. Prefer read-only reviews and suggestions.
+- No drive-by edits: avoid formatting, comment rewrites, or style changes unless specifically authorized.
+
 ### Command Options
 - **Always use long-form command options** (e.g., `--option` instead of `-o`)
 - Examples:
@@ -14,6 +20,7 @@
 - **Always provide exact line numbers** when suggesting fixes
 - Let the developer make the actual edits unless explicitly asked to do so
 - Include sufficient context (3-5 lines before/after) when identifying issues
+- If permission to edit is granted, limit changes to the approved patch only.
 
 ### Build and Deployment
 - **Prefer make targets over raw docker commands**
