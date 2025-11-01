@@ -9,13 +9,6 @@
 source "$(dirname "$0")/Declare-BashScript" "$0" "location:,country-code:,state-or-province:,city:,organization-name:,organizational-unit:,domain-name:,email-address:,env-file:" "l:c:s:C:O:U:D:E:F:" "$@"
 
 ###########
-# Constants
-###########
-
-declare -r secrets_dir="secrets/certificates/${LOCATION:-us-wa}"
-declare -r yaml_file="homebridge-${LOCATION:-us-wa}.yaml"
-
-###########
 # Functions
 ###########
 
@@ -53,12 +46,10 @@ set_env_from_file() {
 
 eval set -- "$script_arguments"
 
-[[ $* != -- ]] || usage
-
 while :; do
     case $1 in
         -h|--help)
-            usage; # does not return
+            usage "New-HomebridgeLocation [--env-file <file>] [--location <loc> --country-code <cc> --state-or-province <state> --city <city> --organization-name <org> --organizational-unit <ou> --domain-name <domain> --email-address <email>] [-h|--help]"; # does not return
             shift 1
             ;;
         --env-file)
@@ -111,6 +102,10 @@ while :; do
     esac
 done
 
+###########
+# Constants
+###########
+
 if [[ -z "${LOCATION:-}" ]]; then error 1 "Missing value for location"; fi
 if [[ -z "${COUNTRY_CODE:-}" ]]; then error 1 "Missing value for country-code"; fi
 if [[ -z "${STATE_OR_PROVINCE:-}" ]]; then error 1 "Missing value for state-or-province"; fi
@@ -124,14 +119,16 @@ if [[ -z "${EMAIL_ADDRESS:-}" ]]; then error 1 "Missing value for email-address"
 # Main
 ###########
 
+declare -r secrets_dir="secrets/certificates/${LOCATION:-us-wa}"
+declare -r compose_file="homebridge-${LOCATION:-us-wa}.yaml"
 mkdir -p "$secrets_dir"
 
 envsubst < secrets/certificates/certificate-request.conf.template > "$secrets_dir/certificate-request.conf"
-envsubst < homebridge.yaml.template > "$yaml_file"
+envsubst < homebridge.yaml.template > "$compose_file"
 
 note "Generated:"
 note "  $secrets_dir/certificate-request.conf"
-note "  $yaml_file"
+note "  $compose_file"
 
 # Save exported environment variables to homebridge-$(LOCATION).env
 env_file="homebridge-${LOCATION}.env"

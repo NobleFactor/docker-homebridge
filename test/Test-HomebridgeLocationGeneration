@@ -3,11 +3,10 @@
 ########################################################################################################################
 # Licensed under the MIT License - see LICENSE file for details.
 # Copyright (c) 2025 Noble Factor. All rights reserved.
-# Test-HomebridgeArtifactsGeneration - Automated test for Homebridge artifact and certificate generation.
+# Test-HomebridgeLocationGeneration - Automated test for Homebridge location-based artifact and certificate generation.
 ########################################################################################################################
 
 source "$(dirname "$0")/../build/Declare-BashScript" "$0" "test-location:,help" "" "$@"
-eval set -- "$script_arguments"
 
 ############
 # Functions
@@ -25,10 +24,12 @@ extract_cert_info() {
 # Arguments
 ############
 
+eval set -- "$script_arguments"
+
 while :; do
     case "$1" in
         -h|--help)
-            usage; # does not return
+            usage "Test-HomebridgeLocationGeneration [--test-location <location>] [--help]"; # does not return
             shift 1
             ;;
         --test-location)
@@ -180,8 +181,8 @@ fi
 echo >&2 && note "=> Comparing $generated_certificates_dir/self-signed.csr to $baseline_certificates_dir/self-signed.csr"
 total_tests=$((total_tests + 1))
 
-observed=$(openssl asn1parse -in $generated_certificates_dir/self-signed.csr -inform PEM)
-expected=$(openssl asn1parse -in $baseline_certificates_dir/self-signed.csr -inform PEM)
+observed="$(openssl asn1parse -in "$generated_certificates_dir/self-signed.csr" -inform PEM)"
+expected="$(openssl asn1parse -in "$baseline_certificates_dir/self-signed.csr" -inform PEM)"
 
 if [[ "$observed" == "$expected" ]]; then
     success "Certificate signing requests match"
@@ -211,7 +212,7 @@ fi
 
 if (( passed_tests == total_tests )); then
     echo >&2 && success "${passed_tests}/${total_tests} tests passed. Cleaning up generated artifacts."
-    rm --verbose -rf "$generated_certificates_dir" "$generated_compose_file""$generated_env_file"
+    rm --verbose -rf "$generated_certificates_dir" "$generated_compose_file" "$generated_env_file"
 else
     echo >&2 && error 0 "$passed_tests/${total_tests} tests passed. Generated artifacts left in place for inspection."
 fi

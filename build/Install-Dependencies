@@ -6,7 +6,7 @@
 # Install-Dependencies - Installs required dependencies for docker-homebridge.
 ########################################################################################################################
 
-source Declare-BashScript "$0" "" "" "$@"
+source "$(dirname "$0")/Declare-BashScript" "$0" "" "" "$@"
 
 sudo apt update 
 sudo apt install --yes curl gawk grepcidr ipcalc jq zip unzip

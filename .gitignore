@@ -16,3 +16,6 @@ homebridge-*.env
 
 # Exclude rclone configuration
 secrets/rclone.conf
+
+# Exclude Makefile env stamp files (created at repo root)
+.env-*.stamp

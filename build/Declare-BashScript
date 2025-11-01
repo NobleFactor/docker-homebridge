@@ -29,7 +29,28 @@ shift 3 || shift 2 || shift 1 ;# Shift past the first three arguments to leave o
 ###########
 
 function usage {
-    man $(man -w "${script_name}" 1>/dev/null 2>&1 || echo "-M '${script_root}/man'") "${script_name}"
+    local _synopsis="${1:-}"
+
+    # Require a synopsis so callers can provide a fallback when man is unavailable
+    if [[ -z "$_synopsis" ]]; then
+        printf '[%s][ERROR] \033[31m%s\033[0m usage() requires a synopsis argument.\n' "$script_name" "$Heavy_ballot" >&2
+        exit 2
+    fi
+
+    # Prefer system man if available
+    if man -w "${script_name}" >/dev/null 2>&1; then
+        man "${script_name}"
+        exit 0
+    fi
+
+    # Fallback to a script-relative man path if present
+    if man -M "${script_root}/man" -w "${script_name}" >/dev/null 2>&1; then
+        man -M "${script_root}/man" "${script_name}"
+        exit 0
+    fi
+
+    # Final fallback: print the synopsis provided by the caller
+    printf "%s\n" "$_synopsis"
     exit 0
 }
 
