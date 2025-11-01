@@ -1,0 +1,13 @@
+.TH Declare-BashScript 1 "October 2025" "docker-homebridge" "User Commands"
+.SH NAME
+Declare-BashScript \- Bash script argument and option parsing helper
+.SH SYNOPSIS
+source Declare-BashScript <script_path> <long-options> <short-options>
+.SH DESCRIPTION
+Provides argument parsing, usage, error, note, and success functions for bash scripts. Intended to be sourced at the top of other scripts.
+.SH USAGE
+source Declare-BashScript $0 "help,verbose,path:," "hvp" "$@"
+.SH OPTIONS
+Options are passed via <long-options> and <short-options> arguments.
+.SH AUTHOR
+NobleFactor

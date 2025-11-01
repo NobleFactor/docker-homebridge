@@ -26,7 +26,7 @@ This directory contains template files for setting up new Homebridge locations.
 
 3. Generate certificates using makefile:
    ```bash
-   make Generate-Secrets-Certificate LOCATION=us-ca
+   make New-HomebridgeCertificates LOCATION=us-ca
    ```
 
 ## Template Variables
@@ -68,7 +68,7 @@ envsubst < secrets/certificates/certificate-request.conf.template \
          > secrets/certificates/${LOCATION}/certificate-request.conf
 
 # Generate certificates
-make Generate-Secrets-Certificate LOCATION=${LOCATION}
+make New-HomebridgeCertificates LOCATION=${LOCATION}
 
 # Create volumes directory
 mkdir --parents volumes/${LOCATION}

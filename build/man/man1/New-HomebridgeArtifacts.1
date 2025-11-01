@@ -1,0 +1,39 @@
+.TH New-HomebridgeLocation 1 "October 2025" "docker-homebridge" "User Commands"
+.SH NAME
+New-HomebridgeLocation \- Generate certificate request and Homebridge YAML for a location
+.SH SYNOPSIS
+New-HomebridgeLocation [OPTIONS]
+.SH DESCRIPTION
+Generates a certificate request (certificate-request.conf) and a Homebridge YAML file (homebridge-LOCATION.yaml) for the specified LOCATION. Places the certificate request in secrets/certificates/LOCATION/ and the YAML file in the workspace root.
+.SH ARGUMENTS
+.TP
+.B --location
+Set the location name (e.g., us-wa)
+.TP
+.B --country-code
+Country code (default: US)
+.TP
+.B --state-or-province
+State or province (default: Washington)
+.TP
+.B --city
+City (default: Redmond)
+.TP
+.B --organization-name
+Organization name (default: The Noble Family)
+.TP
+.B --organizational-unit
+Organizational unit (default: 5028 243rd Ave NE)
+.TP
+.B --domain-name
+Domain name (default: home.thenoble.family)
+.TP
+.B --email-address
+Email address (default: network-admin@thenoble.family)
+.TP
+.B -h, --help
+Show usage information and exit
+.SH USAGE
+LOCATION=us-wa ./build/New-HomebridgeLocation
+.SH AUTHOR
+NobleFactor

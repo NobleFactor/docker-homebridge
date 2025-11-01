@@ -10,5 +10,9 @@ secrets/**/*.key
 secrets/certificates/*/
 !secrets/certificates/*.template
 
+# Exclude generated environment files
+homebridge-*.yaml
+homebridge-*.env
+
 # Exclude rclone configuration
 secrets/rclone.conf
