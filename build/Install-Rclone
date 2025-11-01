@@ -6,7 +6,7 @@
 # Install-Rclone - Installs the current Rclone release and sets up mount commands.
 ########################################################################################################################
 
-# Installs the current Rclone release. This is likely newer than the one the release in the Debian-based system repos.
+# Installs the current Rclone release. This is likely newer than the one in the Debian-based system repos.
 # After installing, use 'rclone selfupdate' to upgrade rclone.
 
 source "$(dirname "$0")/Declare-BashScript" "$0" "help" "h" "$@"
@@ -15,13 +15,14 @@ source "$(dirname "$0")/Declare-BashScript" "$0" "help" "h" "$@"
 # Arguments
 ###########
 
+declare -r synopsis="Installs Rclone and enables mount commands on Debian systems."
 eval set -- "$script_arguments"
-[[ $* != -- ]] || usage
+[[ $* != -- ]] || usage "$synopsis"
 
 while :; do
     case "$1" in
         -h|--help)
-            usage; # does not return
+            usage "$synopsis"
             shift 1
             ;;
         --)
@@ -40,13 +41,46 @@ done
 # Main
 ###########
 
-declare -r platform="linux-${OSARCH}"
+## Ensure required tools are present
+
+missing=()
+
+command -v curl > /dev/null || missing+=(curl)
+command -v unzip > /dev/null || missing+=(unzip)
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+    if command -v apt-get; then
+        sudo apt-get update && sudo apt-get --yes --no-install-recommends install "${missing[@]}"
+    else
+        error 1 "Package manager not found"
+    fi
+fi
+
+## Download and install Rclone
+
+case $(uname -m) in
+    x86_64) 
+        declare -r platform=linux-amd64
+        ;;
+    aarch64) 
+        declare -r platform=linux-arm64
+        ;;
+    armv7l|armv6l) 
+        declare -r platform=linux-arm
+        ;;
+    i686|i386) 
+        declare -r platform=linux-386
+        ;;
+    *) 
+        error 1 "Unsupported architecture: $(uname -m)"
+        ;;
+esac
 
 curl -O https://downloads.rclone.org/rclone-current-${platform}.zip
 unzip rclone-current-${platform}.zip
 
 if dpkg -s rclone | grep installed; then
-    sudo apt remove rclone
+    sudo apt-get --yes remove rclone
 fi
 
 # Install binary
