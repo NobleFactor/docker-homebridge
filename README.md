@@ -1,4 +1,4 @@
-# NobleFactor/docker-homebridge
+# NobleFactor / docker-homebridge
 
 Container image and Makefile to run Homebridge with opinionated defaults, deterministic networking, and rclone-backed backups under s6 supervision.
 
