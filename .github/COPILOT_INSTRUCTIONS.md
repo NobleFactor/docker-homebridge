@@ -2,6 +2,11 @@
 
 ## Development Guidelines
 
+### Reviewer Preferences (owner-required)
+- Always include exact line numbers for every finding in any code review, not just for fixes.
+  - Preferred formats: `path/to/file:123` or `path/to/file:120-128`.
+  - Include 3–5 lines of surrounding context when helpful.
+
 ### Change Control (MANDATORY)
 - Do not modify files unless the user explicitly requests an edit and approves the exact patch.
 - Always present a proposed patch first (filename, before/after context). Apply only after explicit approval.
