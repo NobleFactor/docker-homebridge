@@ -1,4 +1,4 @@
-.TH HOMEBRIDGE-IMAGE 1 "October 2025" "Noble Factor" "User Commands"
+.TH DOCKER-HOMEBRIDGE 1 "October 2025" "Noble Factor" "User Commands"
 .SH NAME
 make \- Manage Homebridge deployment
 .SH SYNOPSIS
@@ -6,7 +6,7 @@ make \- Manage Homebridge deployment
 .I target
 .RI [ VAR=VALUE ... ]
 .SH DESCRIPTION
-The Homebridge image Makefile provides targets to build the Homebridge image, create and manage a container,
+The docker-homebridge Makefile provides targets to build the docker-homebridge image, create and manage a container,
 operate its Docker network, and maintain secrets and backups.
 .PP
 Variables are supplied on the command line as \fBVAR=VALUE\fR assignments. Some variables are optional
@@ -47,7 +47,7 @@ Show this manual page.
 Build the image, ensure the network, and create the container.
 .TP
 \fBNew-HomebridgeImage\fR
-Build the Homebridge image only.
+Build the docker-homebridge image only.
 .TP
 \fBNew-HomebridgeContainer\fR
 Create the container from an existing image; validates \fBIP_RANGE\fR and optional \fBIP_ADDRESS\fR, prepares volumes,

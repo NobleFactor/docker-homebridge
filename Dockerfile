@@ -1,6 +1,6 @@
 ########################################################################################################################
 # Copyright (c) 2024 Noble Factor
-# homebridge-image
+# docker-homebridge
 ########################################################################################################################
 
 # TODO (david-noble) Credit Homebridge as appropriate and required by custom and the law.

@@ -142,7 +142,7 @@ help-short: ## Show brief help for annotated targets
 	@awk 'BEGIN {FS = ":.*##"; pad = $(HELP_COLWIDTH); print "Usage: make <target> [VAR=VALUE]"; print ""; print "Targets:"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-*s %s\n", pad, $$1, $$2} /^##@/ {printf "\n%s\n", substr($$0,5)}' $(MAKEFILE_LIST) | less -R
 
 help-full: ## Show detailed usage (man page)
-	@man -P 'less -R' -l "$(project_root)/docs/homebridge-image.1"
+	@man -P 'less -R' -l "$(project_root)/docs/docker-homebridge.1"
 
 ##@ Utilities
 clean: ## Stop, remove network, prune unused images/containers/volumes (DANGEROUS)
