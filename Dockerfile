@@ -77,12 +77,11 @@ Rclone Docker Package Manifest
 
  | Package | Version |
  |:-------:|:-------:|
- |Ubuntu|24.04|
- |s6-overlay|3.2.0.2|
- |Base Image|homebridge/homebridge:${homebridge_version}|
+ |$(cat /etc/os-release | awk -F '=' '/^NAME=/ { gsub(/^"|"$/, "", $2); print $2; exit }')|$(cat /etc/os-release | awk -F '=' '/^VERSION=/ { gsub(/^"|"$/, "", $2); print $2; exit }')|
+ |s6-overlay|${S6_OVERLAY_VERSION:-}|
  |Arch|$(dpkg --print-architecture)|
- |fuse3|$(dpkg -s fuse3 | awk '/^Version:/ {print $2}' | cut -d'-' -f1)|
- |rclone|$(rclone version --check 2>/dev/null | awk 'NR==1{print $2}' || rclone version 2>/dev/null | awk 'NR==1{print $2}')|
+ |fuse3|$(dpkg -s fuse3 | awk '/^Version:/ { print $2 }' | cut -d'-' -f1)|
+ |rclone|$(rclone version --check 2>/dev/null | awk 'NR==1{ print $2 }' || rclone version 2>/dev/null | awk 'NR==1{ print $2 }')|
 
 EOF
 

@@ -1,4 +1,4 @@
-.TH DOCKER-HOMEBRIDGE 1 "October 2025" "Noble Factor" "User Commands"
+.TH DOCKER-HOMEBRIDGE 1 "December 2025" "Noble Factor" "User Commands"
 .SH NAME
 make \- Manage Homebridge deployment
 .SH SYNOPSIS
@@ -17,8 +17,8 @@ with sensible defaults; others are required for network creation.
 CIDR for the Docker network (e.g., 192.168.1.8/29). Ensure it does not conflict with your DHCP pool.
 Required by \fBNew-HomebridgeContainer\fR and \fBNew-Homebridge\fR.
 .TP
-\fBISO_SUBDIVISION\fR
-ISO 3166-2 subdivision code (e.g., us-wa). Defaults to auto-detection via the Docker host geo-location.
+\fBLOCATION\fR
+Location code (e.g., us-wa). Defaults to auto-detection via the Docker host geo-location.
 .TP
 \fBCONTAINER_ENVIRONMENT\fR
 Deployment environment: dev, test, prod (default: dev). Non-prod values are appended to the default hostname.
@@ -27,7 +27,7 @@ Deployment environment: dev, test, prod (default: dev). Non-prod values are appe
 Container domain name (default: localdomain).
 .TP
 \fBCONTAINER_HOSTNAME\fR
-Container hostname (default: \fBhomebridge-ISO_SUBDIVISION[-CONTAINER_ENVIRONMENT]\fR).
+Container hostname (default: \fBhomebridge-LOCATION[-CONTAINER_ENVIRONMENT]\fR).
 .TP
 \fBHOMEBRIDGE_VERSION\fR
 Upstream Homebridge version to build (default: latest).
@@ -35,6 +35,10 @@ Upstream Homebridge version to build (default: latest).
 \fBIP_ADDRESS\fR
 IPv4 address for the container (e.g., 192.168.1.10). Used during container creation. If omitted,
 Docker assigns an available address from \fBIP_RANGE\fR.
+.TP
+\fBMAC_ADDRESS\fR
+MAC address for the container (e.g., 02:aa:bb:cc:dd:ee). Used during container creation. If omitted,
+Docker assigns a MAC address automatically.
 .SH COMMANDS
 .TP
 \fBhelp\fR, \fBhelp-short\fR
@@ -53,11 +57,17 @@ Build the docker-homebridge image only.
 Create the container from an existing image; validates \fBIP_RANGE\fR and optional \fBIP_ADDRESS\fR, prepares volumes,
 creates/uses the macvlan/bridge network depending on host OS, and outputs inspect information.
 .TP
+\fBNew-HomebridgeLocation\fR
+Ensure location-specific files (compose, cert config) exist and are up-to-date based on the env file.
+.TP
 \fBStart-Homebridge\fR / \fBStop-Homebridge\fR / \fBRestart-Homebridge\fR
 Start, stop, or restart the container via Docker Compose. Note: \fBIP_ADDRESS\fR is only used at creation time.
 .TP
 \fBGet-HomebridgeStatus\fR
 Display Docker Compose status (JSON) for the project.
+.TP
+\fBGet-HomebridgeHealth\fR
+Display the last health check log entry for the container.
 .TP
 \fBStart-HomebridgeShell\fR
 Open an interactive shell in the running container.
@@ -78,21 +88,27 @@ Copy the \fBrclone.conf\fR secret into the container's volume.
 Stop the container, remove the network, prune images/containers, and prune unused volumes. \fBDANGEROUS\fR.
 .SH FILES
 .TP
-\fIhomebridge-<subdivision>.yaml\fR
-Compose file for a specific ISO subdivision (e.g., \fIhomebridge-us-wa.yaml\fR).
+\fIhomebridge-<location>.yaml\fR
+Compose file for a specific location (e.g., \fIhomebridge-us-wa.yaml\fR).
 .TP
 \fIhomebridge.networks.yaml\fR
 Additional Compose networks configuration.
 .TP
-\fIsecrets/certificates/<subdivision>/*\fR
+\fIsecrets/certificates/<location>/*\fR
 Certificate configuration and generated artifacts.
 .TP
-\fIvolumes/<subdivision>/*\fR
+\fIvolumes/<location>/*\fR
 Container volumes including configs, backups, and persist directories.
+.TP
+\fIhomebridge.config/<location>/<container-hostname>.mk\fR
+Optional per-instance network configuration containing \fBIP_ADDRESS\fR, \fBIP_RANGE\fR, and \fBMAC_ADDRESS\fR.
+Command-line assignments override these values. Docker assigns defaults for omitted values.
 .SH NOTES
 - Network driver and device are auto-detected: macvlan on Linux, bridge on macOS.
 - Ensure \fBIP_RANGE\fR does not overlap with your DHCP pool.
 - \fBIP_ADDRESS\fR is validated to be inside \fBIP_RANGE\fR when provided.
+- Per-instance network config: create \fIhomebridge.config/<location>/<hostname>.mk\fR with simple \fBVAR=value\fR assignments
+  (allowed: \fBIP_ADDRESS\fR, \fBIP_RANGE\fR, \fBMAC_ADDRESS\fR). Command-line overrides take precedence.
 .SH SEE ALSO
 .BR docker (1),
 .BR docker-compose (1),
