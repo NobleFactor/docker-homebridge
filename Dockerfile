@@ -49,8 +49,9 @@ ARG puid pgid
 
 ## INSTALLATION
 
-RUN <<EOF
 # Install rclone and dependencies
+
+RUN <<EOF
 apt-get update
 apt-get --yes --no-install-recommends install fuse3 iproute2 unzip
 curl --silent --show-error https://rclone.org/install.sh | bash -s

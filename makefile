@@ -237,7 +237,7 @@ New-HomebridgeContainer: $(project_file) $(certificates_root)/certificate-reques
 		fi
 	fi
 
-	$(docker_compose) stop && build/New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" --ip-range "$(IP_RANGE)" homebridge
+	$(docker_compose) stop && build/New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" $(if $(IP_RANGE),--ip-range "$(IP_RANGE)") homebridge
 	$(docker_compose) create --force-recreate --pull never --remove-orphans
 	sudo docker inspect "$(CONTAINER_HOSTNAME)"
 
