@@ -2,6 +2,7 @@ services:
   homebridge:
     image: ${HOMEBRIDGE_IMAGE}
     container_name: ${CONTAINER_HOSTNAME}
+    mac_address: ${MAC_ADDRESS:-}
     hostname: ${CONTAINER_HOSTNAME}
     domainname: ${CONTAINER_DOMAIN_NAME}
     networks:
@@ -17,10 +18,17 @@ services:
       PUID: 1000  # first user created on most systems
       PGID: 0     # root group => can elevate permissions if needed
     healthcheck:
-      test: ["CMD-SHELL", "curl --cacert .config/certificates/public-key.pem --fail --silent --output /dev/null --show-error --write-out \"Total time: %{time_total}s\\n\" https://localhost || exit 1"]
+      test: [ "CMD", "curl",
+        "--fail",
+        "--insecure",
+        "--output", "/dev/null",
+        "--show-error",
+        "--silent",
+        "--write-out", "Total time: %{time_total}s\\n",
+        "https://localhost" ]
       interval: 60s
       retries: 5
-      start_period: 300s
+      start_period: 30s
       timeout: 2s
     logging:
       driver: json-file

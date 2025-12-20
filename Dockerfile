@@ -1,6 +1,6 @@
 ########################################################################################################################
 # Copyright (c) 2024 Noble Factor
-# homebridge-image
+# docker-homebridge
 ########################################################################################################################
 
 # TODO (david-noble) Credit Homebridge as appropriate and required by custom and the law.
@@ -49,13 +49,27 @@ ARG puid pgid
 
 ## INSTALLATION
 
-RUN <<EOF
 # Install rclone and dependencies
+
+RUN <<EOF
 apt-get update
-apt-get -y upgrade
-apt-get -y install avahi-daemon fuse3 iproute2 kmod unzip
+apt-get --yes --no-install-recommends install fuse3 iproute2 unzip
 curl --silent --show-error https://rclone.org/install.sh | bash -s
+apt-get remove --yes --purge unzip
+apt-get autoremove --yes
+apt-get clean
+rm /var/lib/apt/lists/* -rf
 EOF
+
+# Update fuse to allow user_allow_other
+
+RUN <<EOF
+sed -i -E 's/^[[:space:]]*#?[[:space:]]*user_allow_other[[:space:]]*$/user_allow_other/' /etc/fuse.conf && (
+    grep -Eq '^[[:space:]]*user_allow_other[[:space:]]*$' /etc/fuse.conf || 
+    echo 'user_allow_other' >> /etc/fuse.conf )
+EOF
+
+## Create Rclone manifest
 
 RUN mkdir -p /opt/homebridge && cat > /opt/homebridge/Rclone.manifest <<EOF
 Rclone Docker Package Manifest
@@ -64,10 +78,11 @@ Rclone Docker Package Manifest
 
  | Package | Version |
  |:-------:|:-------:|
- |Ubuntu|24.04|
- |s6-overlay|3.2.0.2|
- |fuse3|$(dpkg -s fuse3 | awk '/^Version:/ {print $2}' | cut -d'-' -f1)|
- |rclone|$(rclone version --check 2>/dev/null | awk 'NR==1{print $2}' || rclone version 2>/dev/null | awk 'NR==1{print $2}')|
+ |$(cat /etc/os-release | awk -F '=' '/^NAME=/ { gsub(/^"|"$/, "", $2); print $2; exit }')|$(cat /etc/os-release | awk -F '=' '/^VERSION=/ { gsub(/^"|"$/, "", $2); print $2; exit }')|
+ |s6-overlay|${S6_OVERLAY_VERSION:-}|
+ |Arch|$(dpkg --print-architecture)|
+ |fuse3|$(dpkg -s fuse3 | awk '/^Version:/ { print $2 }' | cut -d'-' -f1)|
+ |rclone|$(rclone version --check 2>/dev/null | awk 'NR==1{ print $2 }' || rclone version 2>/dev/null | awk 'NR==1{ print $2 }')|
 
 EOF
 
@@ -149,7 +164,10 @@ foreground { chown -R homebridge:root /homebridge/.cache/rclone /homebridge/back
 EOF
 
 ### rclone-backups-run (longrun)
-
+#### 1. We use --allow-non-empty because homebridge may have already created directories in /homebridge/backups before the mount occurs.
+#### This avoids mount failure due to non-empty target directory.
+#### 2. We use --allow-other because homebridge cannot access the mount point when it runs as root and the mount is owned by user homebridge.
+#### This requires user_allow_other in /etc/fuse.conf which we set earlier.
 RUN touch /etc/s6-overlay/s6-rc.d/rclone-backups-run/run && chmod +x /etc/s6-overlay/s6-rc.d/rclone-backups-run/run && cat > /etc/s6-overlay/s6-rc.d/rclone-backups-run/run <<EOF
 #!/command/with-contenv sh
 exec /command/s6-setuidgid homebridge /usr/bin/rclone mount \

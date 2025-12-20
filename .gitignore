@@ -2,6 +2,8 @@
 /HomebridgeBackups/**
 /volumes/**
 
+/.github/copilot-instructions.md
+
 # Exclude all certificate files from secrets directory
 secrets/**/*.pem
 secrets/**/*.csr
