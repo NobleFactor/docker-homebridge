@@ -9,6 +9,7 @@
 SHELL := bash
 .SHELLFLAGS := -o errexit -o nounset -o pipefail -c
 .ONESHELL:
+.SILENT:
 
 ## PARAMETERS
 
@@ -71,9 +72,27 @@ project_root := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 project_file := $(project_root)/$(project_name)-$(LOCATION).yaml
 project_networks_file := $(project_root)/$(project_name).networks.yaml
 
-# Compose file may not exist initially; targets below will ensure generation when needed.
-
 HOMEBRIDGE_IMAGE := noblefactor/$(project_name):$(TAG)
+
+### PER-INSTANCE NETWORK CONFIG (Makefile syntax)
+
+config_network_dir := $(project_root)/homebridge.config/$(LOCATION)
+network_mk_file := $(config_network_dir)/$(CONTAINER_HOSTNAME).mk
+
+ifneq ($(wildcard $(network_mk_file)),)
+	_network_mk_validation := $(shell awk -F= '\
+		/^[[:space:]]*#/ { next } \
+		/^[[:space:]]*$$/ { next } \
+		!/^[[:space:]]*(IP_ADDRESS|IP_RANGE|MAC_ADDRESS)[[:space:]]*=/ { \
+			printf("Invalid key or line: %s\n", $$0); exit 1 } \
+		!/^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=/ { \
+			printf("Invalid assignment: %s\n", $$0); exit 1 }' \
+		$(network_mk_file) 2>&1)
+	ifneq ($(_network_mk_validation),)
+		$(error Invalid network.mk: $(_network_mk_validation))
+	endif
+	include $(network_mk_file)
+endif
 
 ### RCLONE
 
@@ -124,10 +143,12 @@ network_name := $(shell \
 ## TARGETS
 
 docker_compose := sudo \
+	IP_ADDRESS="$(IP_ADDRESS)" \
+	MAC_ADDRESS="$(MAC_ADDRESS)" \
+    CONTAINER_DOMAIN_NAME="$(CONTAINER_DOMAIN_NAME)" \
+    CONTAINER_HOSTNAME="$(CONTAINER_HOSTNAME)" \
     HOMEBRIDGE_IMAGE="$(HOMEBRIDGE_IMAGE)" \
     LOCATION="$(LOCATION)" \
-    CONTAINER_HOSTNAME="$(CONTAINER_HOSTNAME)" \
-    CONTAINER_DOMAIN_NAME="$(CONTAINER_DOMAIN_NAME)" \
     NETWORK_NAME="$(network_name)" \
     docker compose -f "$(project_file)" -f "$(project_networks_file)"
 
@@ -139,10 +160,10 @@ HELP_COLWIDTH ?= 28
 help: help-short ## Show brief help (alias: help-short)
 
 help-short: ## Show brief help for annotated targets
-	@awk 'BEGIN {FS = ":.*##"; pad = $(HELP_COLWIDTH); print "Usage: make <target> [VAR=VALUE]"; print ""; print "Targets:"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-*s %s\n", pad, $$1, $$2} /^##@/ {printf "\n%s\n", substr($$0,5)}' $(MAKEFILE_LIST) | less -R
+	awk 'BEGIN {FS = ":.*##"; pad = $(HELP_COLWIDTH); print "Usage: make <target> [VAR=VALUE]"; print ""; print "Targets:"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-*s %s\n", pad, $$1, $$2} /^##@/ {printf "\n%s\n", substr($$0,5)}' $(MAKEFILE_LIST) | less -R
 
 help-full: ## Show detailed usage (man page)
-	@man -P 'less -R' -l "$(project_root)/docs/homebridge-image.1"
+	man -P 'less -R' -l "$(project_root)/docs/docker-homebridge.1"
 
 ##@ Utilities
 clean: ## Stop, remove network, prune unused images/containers/volumes (DANGEROUS)
@@ -153,7 +174,7 @@ clean: ## Stop, remove network, prune unused images/containers/volumes (DANGEROU
 
 ## Ensure LOCATION artifacts exist or are up-to-date vs env
 New-HomebridgeLocation: ## Ensure location files exist; generate if missing or older than homebridge-$(LOCATION).env
-	@env_file="$(project_root)/homebridge-$(LOCATION).env"; \
+	env_file="$(project_root)/homebridge-$(LOCATION).env"; \
 	if [[ ! -f "$$env_file" ]]; then \
 		echo "Missing environment file: $$env_file"; \
 		exit 1; \
@@ -166,21 +187,24 @@ New-HomebridgeLocation: ## Ensure location files exist; generate if missing or o
 	fi
 
 ##@ Lifecycle
+Get-HomebridgeHealth: ## Show container health (JSON)
+	sudo docker inspect homebridge-us-wa | jq -r '.[0].State.Health'
+
 Get-HomebridgeStatus: $(project_file) ## Show compose status (JSON)
 	$(docker_compose) ps --all --format json --no-trunc | jq .
 
 ##@ Backups
 Mount-HomebridgeBackups: ## Mount OneDrive backups via rclone
 
-	@declare -r mount_subcommand=$$([[ $(OS) == Darwin ]] && echo nfsmount || echo mount) 
-	@declare -r remote_path="onedrive:Homebridge/backups"
-	@declare -r mount_dir="HomebridgeBackups"
-	@declare -r rclone_log_file="$${mount_dir}/../HomebridgeBackups.rclone.log"
+	declare -r mount_subcommand=$$([[ $(OS) == Darwin ]] && echo nfsmount || echo mount) 
+	declare -r remote_path="onedrive:Homebridge/backups"
+	declare -r mount_dir="HomebridgeBackups"
+	declare -r rclone_log_file="$${mount_dir}/../HomebridgeBackups.rclone.log"
 
-	@mkdir --parents "$${mount_dir}"
+	mkdir --parents "$${mount_dir}"
 
-	@pids="$$(ps -eo pid=,args= | awk -v mount="$$mount_subcommand" -v remote="$$remote_path" -v mount_dir="$$mount_dir" 'index($$0, "rclone " mount " " remote " " mount_dir) { print $$1 }')"
-	@if [[ -n "$$pids" ]]; then
+	pids="$$(ps -eo pid=,args= | awk -v mount="$$mount_subcommand" -v remote="$$remote_path" -v mount_dir="$$mount_dir" 'index($$0, "rclone " mount " " remote " " mount_dir) { print $$1 }')"
+	if [[ -n "$$pids" ]]; then
 		kill $$pids || true
 	fi
 
@@ -190,19 +214,19 @@ Mount-HomebridgeBackups: ## Mount OneDrive backups via rclone
 		--log-level=DEBUG \
 		--log-file="$${rclone_log_file}" || true
 
-	@if [[ -f "$${rclone_log_file}" ]]; then
+	if [[ -f "$${rclone_log_file}" ]]; then
 		awk 'END{print}' "$${rclone_log_file}" || true
 	fi
 
 ##@ Build and Create
 New-Homebridge: New-HomebridgeImage New-HomebridgeContainer ## Build image and create container
-	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Start Homebridge in $(LOCATION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
+	echo -e "\n\033[1mWhat's next:\033[0m"
+	echo "    Start Homebridge in $(LOCATION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeContainer: $(project_file) $(certificates_root)/certificate-request.conf $(certificates) $(container_backups) $(container_certificates) $(container_rclone_conf_file) ## Create container from existing image and prepare volumes
 
 	@if [[ -z "$(IP_RANGE)" ]]; then
-		echo "An IP_RANGE is required. Take care to ensure it does not overlap with the pool of addresses managed by your DHCP Server."
+		echo "An IP_RANGE is required. Define it in $(network_mk_file) or override via: make IP_RANGE=<CIDR>"; \
 		exit 1		
 	fi
 
@@ -213,12 +237,12 @@ New-HomebridgeContainer: $(project_file) $(certificates_root)/certificate-reques
 		fi
 	fi
 
-	$(docker_compose) stop && New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" --ip-range "$(IP_RANGE)" homebridge
+	$(docker_compose) stop && build/New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" $(if $(IP_RANGE),--ip-range "$(IP_RANGE)") homebridge
 	$(docker_compose) create --force-recreate --pull never --remove-orphans
-	@sudo docker inspect "$(CONTAINER_HOSTNAME)"
+	sudo docker inspect "$(CONTAINER_HOSTNAME)"
 
-	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Start Homebridge in $(LOCATION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
+	echo -e "\n\033[1mWhat's next:\033[0m"
+	echo "    Start Homebridge in $(LOCATION): make Start-Homebridge [IP_ADDRESS=<IP_ADDRESS>]"
 
 New-HomebridgeImage: ## Build the Homebridge image only
 	sudo docker buildx build \
@@ -226,8 +250,8 @@ New-HomebridgeImage: ## Build the Homebridge image only
 		--build-arg puid=$(shell id -u) \
 		--load --progress=plain \
 		--tag "$(HOMEBRIDGE_IMAGE)" .
-	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Create Homebridge container in $(LOCATION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
+	echo -e "\n\033[1mWhat's next:\033[0m"
+	echo "    Create Homebridge container in $(LOCATION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
 Restart-Homebridge: $(project_file) $(certificates_root)/certificate-request.conf ## Restart container
 	$(docker_compose) restart
@@ -253,14 +277,14 @@ New-HomebridgeCertificates: $(certificates_root)/certificate-request.conf ## Gen
 Update-HomebridgeCertificates: $(certificates) ## Copy certificates into container volume for LOCATION
 	mkdir --parent "$(volume_root)/.config/certificates"
 	cp --verbose $(certificates) "$(volume_root)/.config/certificates"
-	@echo -e "\n\033[1mWhat's next:\033[0m"
-	@echo "    Ensure that Homebridge in $(LOCATION) loads new certificates: make Restart-Homebridge"
+	echo -e "\n\033[1mWhat's next:\033[0m"
+	echo "    Ensure that Homebridge in $(LOCATION) loads new certificates: make Restart-Homebridge"
 
 Update-HomebridgeRcloneConf: $(rclone_conf_file) ## Copy rclone.conf into container volume for LOCATION
 	mkdir --parent "$(volume_root)/.config"
 	cp --verbose $(rclone_conf_file) "$(volume_root)/.config"
-	@echo -e "\n\033[1mWhat's next:\033[0m"	
-	@echo "    Ensure that Homebridge in $(LOCATION) reconfigures rclone: make Restart-Homebridge LOCATION=$(LOCATION)"
+	echo -e "\n\033[1mWhat's next:\033[0m"	
+	echo "    Ensure that Homebridge in $(LOCATION) reconfigures rclone: make Restart-Homebridge LOCATION=$(LOCATION)"
 
 ## BUILD RULES
 
@@ -284,14 +308,14 @@ certreq_template := $(project_root)/secrets/certificates/certificate-request.con
 
 # Friendly guidance when the env file is missing
 $(env_file):
-	@echo "Missing environment file: $@"; \
+	echo "Missing environment file: $@"; \
 	 echo "Create it or symlink it into the project root (e.g., from test/baseline)."; \
 	 echo "Expected path: $(project_root)/homebridge-$(LOCATION).env"; \
 	 exit 1
 
 # Stamp file tracks env freshness without requiring the env to be a hard prerequisite
 $(env_stamp): $(env_file)
-	@touch "$@"
+	touch "$@"
 
 $(project_file): $(compose_template) $(env_stamp)
 	$(MAKE) New-HomebridgeLocation

@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
+# shellcheck source=bin/Declare-BashScript
 
 ########################################################################################################################
-# Licensed under the MIT License - see LICENSE file for details.
-# Copyright (c) 2025 Noble Factor. All rights reserved.
-# New-DockerNetwork - Creates a new Docker network on a specified parent device.
+# SPDX-FileCopyrightText: 2016-2025 Noble Factor
+# SPDX-License-Identifier: MIT
 ########################################################################################################################
+
+# New-DockerNetwork - create a docker network using Noble Factor conventions
 
 # Documentation is in the accompanying manual page: New-DockerNetwork(1).
 #
 # Reference:
 #
 # 1. dockerdocs: docker network create
-#    https://docs.docker.com/reference/cli/docker/network/create/#:~:text=$%20docker%20network%20create%20%2Dd%20bridge,responsibility%20to%20avoid%20name%20conflicts.
+#    https://docs.docker.com/reference/cli/docker/network/create/
+#    (see the "docker network create -d bridge" section; responsibility to avoid name conflicts)
 #
 # 2. dockerdocs: Macvlan network driver
 #    https://docs.docker.com/engine/network/drivers/macvlan/
@@ -149,8 +152,8 @@ if [[ -z ${ip_range:-} ]]; then
 else
     case $driver_name in
     ipvlan|macvlan)
-        declare -r address_pool="$(ipcalc ${ip_range} | awk '/^HostMin: / { print $2; exit }')"
-        declare -r host_address="$(ipcalc ${ip_range} | awk '/^HostMax: / { print $2; exit }')"
+        declare -r address_pool="$(ipcalc "${ip_range}" | awk '/^HostMin: / { print $2; exit }')/$(ipcalc "${ip_range}" | awk '/^Netmask: / { print $4; exit }')"
+        declare -r host_address="$(ipcalc "${ip_range}" | awk '/^HostMax: / { print $2; exit }')"
         ;;
     bridge|host|none)
         note "The --ip-range option is not applicable for the '${driver_name}' driver. Ignoring."
@@ -211,12 +214,11 @@ sudo ip link del "${service_name:0:10}_shim" 2>/dev/null || true
 
 # Create the docker network
 
-sudo docker network create --driver "${driver_name}"\
-    --ipv4 --subnet="${ipv4_subnet}" --gateway="${ipv4_gateway}"\
-        $([[ -n ${address_pool:-} ]]                                      && echo --ip-range "${address_pool}")\
-        $([[ "${driver_name}" == macvlan || "${driver_name}" == ipvlan ]] && echo --opt parent="${device_name}")\
-        $([[ -n ${host_address:-} ]]                                      && echo --aux-address hostshim="${host_address}")\
-        $([[ $OSTYPE == linux-gnu* && -n ${ipv6_subnet:-} ]]              && echo --ipv6 --subnet="${ipv6_subnet}")\
+sudo docker network create --driver "${driver_name}" --ipv4 --subnet="${ipv4_subnet}" --gateway="${ipv4_gateway}"\
+    $([[ -n ${address_pool:-} ]]                                      && echo --ip-range "${address_pool}")\
+    $([[ "${driver_name}" == macvlan || "${driver_name}" == ipvlan ]] && echo --opt parent="${device_name}")\
+    $([[ -n ${host_address:-} ]]                                      && echo --aux-address hostshim="${host_address}")\
+    $([[ $OSTYPE == linux-gnu* && -n ${ipv6_subnet:-} ]]              && echo --ipv6)\
     "${network_name}" > /dev/null
 
 declare -r link_name="$(get_linkname "${network_name}")"
@@ -224,7 +226,9 @@ declare -r link_name="$(get_linkname "${network_name}")"
 note "Created docker ${driver_name} network ${network_name} on parent device ${device_name}$([[ -z ${link_name} ]] || echo " with ip link name ${link_name}")"
 sudo docker network inspect "${network_name}" 1>&2
 
-[[ -z ${link_name:-} ]] || ip -s link show "${link_name}"
+if [[ "$OSTYPE" == linux-gnu* && -n ${link_name:-} ]]; then
+    ip -s link show "${link_name}" # Links show up on Linux, but not on macOS
+fi
 
 if [[ "$OSTYPE" == linux-gnu* && -n ${ip_range:-} ]]; then
 
@@ -237,7 +241,7 @@ if [[ "$OSTYPE" == linux-gnu* && -n ${ip_range:-} ]]; then
     sudo ip addr add "${host_address}/${subnet_prefix}" dev "${shim_link_name}"
     sudo ip link set "${shim_link_name}" up
 
-    note $"Created shim link ${shim_link_name} for host access to containers on ${network_name}:\n$(ip -s link show \"${shim_link_name}\")"
+    note $"Created shim link ${shim_link_name} for host access to containers on ${network_name}:\n$(ip -s link show "${shim_link_name}")"
 
 fi
 

@@ -1,6 +1,6 @@
 ########################################################################################################################
 # Copyright (c) 2024 Noble Factor
-# homebridge-image
+# docker-homebridge
 ########################################################################################################################
 
 # TODO (david-noble) Credit Homebridge as appropriate and required by custom and the law.
@@ -49,8 +49,9 @@ ARG puid pgid
 
 ## INSTALLATION
 
-RUN <<EOF
 # Install rclone and dependencies
+
+RUN <<EOF
 apt-get update
 apt-get --yes --no-install-recommends install fuse3 iproute2 unzip
 curl --silent --show-error https://rclone.org/install.sh | bash -s
@@ -77,12 +78,11 @@ Rclone Docker Package Manifest
 
  | Package | Version |
  |:-------:|:-------:|
- |Ubuntu|24.04|
- |s6-overlay|3.2.0.2|
- |Base Image|homebridge/homebridge:${homebridge_version}|
+ |$(cat /etc/os-release | awk -F '=' '/^NAME=/ { gsub(/^"|"$/, "", $2); print $2; exit }')|$(cat /etc/os-release | awk -F '=' '/^VERSION=/ { gsub(/^"|"$/, "", $2); print $2; exit }')|
+ |s6-overlay|${S6_OVERLAY_VERSION:-}|
  |Arch|$(dpkg --print-architecture)|
- |fuse3|$(dpkg -s fuse3 | awk '/^Version:/ {print $2}' | cut -d'-' -f1)|
- |rclone|$(rclone version --check 2>/dev/null | awk 'NR==1{print $2}' || rclone version 2>/dev/null | awk 'NR==1{print $2}')|
+ |fuse3|$(dpkg -s fuse3 | awk '/^Version:/ { print $2 }' | cut -d'-' -f1)|
+ |rclone|$(rclone version --check 2>/dev/null | awk 'NR==1{ print $2 }' || rclone version 2>/dev/null | awk 'NR==1{ print $2 }')|
 
 EOF
 
