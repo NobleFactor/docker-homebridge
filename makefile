@@ -64,7 +64,7 @@ export IP_RANGE
 ### PROJECT
 
 ifeq ($(strip $(TAG)),)
-    TAG := 1.0.0-preview.1
+    TAG := 1.0.0-preview.2
 endif
 
 project_name := homebridge
