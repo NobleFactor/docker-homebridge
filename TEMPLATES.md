@@ -20,8 +20,8 @@ This directory contains template files for setting up new Homebridge locations.
           DOMAIN_NAME="home.example.com" \
           EMAIL_ADDRESS="admin@example.com"
    
-   envsubst < secrets/certificates/certificate-request.conf.template \
-            > secrets/certificates/us-ca/certificate-request.conf
+   envsubst < homebridge.config/certificates/certificate-request.conf.template \
+            > homebridge.config/us-ca/certificates/certificate-request.conf
    ```
 
 3. Generate certificates using makefile:
@@ -61,11 +61,11 @@ export EMAIL_ADDRESS="admin@example.com"
 envsubst < homebridge.yaml.template > homebridge-${LOCATION}.yaml
 
 # Create certificate directory
-mkdir --parents secrets/certificates/${LOCATION}
+mkdir --parents homebridge.config/${LOCATION}/certificates
 
 # Generate certificate config
-envsubst < secrets/certificates/certificate-request.conf.template \
-         > secrets/certificates/${LOCATION}/certificate-request.conf
+envsubst < homebridge.config/certificates/certificate-request.conf.template \
+         > homebridge.config/${LOCATION}/certificates/certificate-request.conf
 
 # Generate certificates
 make New-HomebridgeCertificates LOCATION=${LOCATION}

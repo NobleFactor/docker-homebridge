@@ -74,8 +74,8 @@ Guidelines:
 - Defaults: test location defaults to `fake-wa` unless overridden.
 - Template paths are project‑root relative and hard‑wired:
     - `./homebridge.yaml.template`
-    - `./secrets/certificates/certificate-request.conf.template`
-- Generated artifacts live in `./` and `./secrets/<test-location>`.
+    - `./homebridge.config/certificates/certificate-request.conf.template`
+- Generated artifacts live in `./` and `./homebridge.config/<test-location>/certificates/`.
 - Baselines live in `./test/baseline/<test-location>` and `./test/baseline/homebridge-<test-location>.yaml`.
 - If a script sources `Declare-BashScript`, don’t add another `set -euo pipefail`—it’s already handled.
 - Keep variables/args minimal—include only what’s required for logic and comparison.

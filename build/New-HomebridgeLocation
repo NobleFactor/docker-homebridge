@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
+
+########################################################################################################################
+# SPDX-FileCopyrightText: 2016-2025 Noble Factor
 # SPDX-License-Identifier: MIT
-
 ########################################################################################################################
-# Licensed under the MIT License - see LICENSE file for details.
-# Copyright (c) 2025 Noble Factor. All rights reserved.
+
 # New-HomebridgeLocation - Generates Homebridge artifacts and certificates.
-########################################################################################################################
 
-source "$(dirname "$0")/Declare-BashScript" "$0" "location:,country-code:,state-or-province:,city:,organization-name:,organizational-unit:,domain-name:,email-address:,env-file:" "l:c:s:C:O:U:D:E:F:" "$@"
+# TODO (david-noble) generalize this script. Is there more to do at this point than rename the file? Will this file work
+# for docker-webhook as well as docker-homebridge?
+
+source "$(dirname "$0")/Declare-BashScript" "$0" "server-role:,location:,country-code:,state-or-province:,city:,organization-name:,organizational-unit:,domain-name:,email-address:,env-file:" "l:c:s:C:O:U:D:E:F:" "$@"
 
 ###########
 # Functions
@@ -15,7 +18,17 @@ source "$(dirname "$0")/Declare-BashScript" "$0" "location:,country-code:,state-
 
 set_env_from_file() {
 
-    local allowed_vars=( LOCATION COUNTRY_CODE STATE_OR_PROVINCE CITY ORGANIZATION_NAME ORGANIZATIONAL_UNIT DOMAIN_NAME EMAIL_ADDRESS )
+    local allowed_vars=( 
+        SERVER_ROLE
+        LOCATION
+        COUNTRY_CODE
+        STATE_OR_PROVINCE
+        CITY
+        ORGANIZATION_NAME
+        ORGANIZATIONAL_UNIT
+        DOMAIN_NAME
+        EMAIL_ADDRESS )
+
     local env_file="$1"
 
     if [[ ! -f "$env_file" ]]; then
@@ -50,7 +63,7 @@ eval set -- "$script_arguments"
 while :; do
     case $1 in
         -h|--help)
-            usage "New-HomebridgeLocation [--env-file <file>] [--location <loc> --country-code <cc> --state-or-province <state> --city <city> --organization-name <org> --organizational-unit <ou> --domain-name <domain> --email-address <email>] [-h|--help]"; # does not return
+            usage "New-HomebridgeLocation [--env-file <file>] [--server-role <role-name>] [--location <loc> --country-code <cc> --state-or-province <state> --city <city> --organization-name <org> --organizational-unit <ou> --domain-name <domain> --email-address <email>] [-h|--help]"; # does not return
             shift 1
             ;;
         --env-file)
@@ -59,6 +72,10 @@ while :; do
                 error 1 "Environment file not found: $env_file"
             fi
             set_env_from_file "$env_file"
+            shift 2
+            ;;
+        --server-role)
+            export SERVER_ROLE="$2"
             shift 2
             ;;
         --location)
@@ -107,34 +124,29 @@ done
 # Constants
 ###########
 
-if [[ -z "${LOCATION:-}" ]]; then error 1 "Missing value for location"; fi
-if [[ -z "${COUNTRY_CODE:-}" ]]; then error 1 "Missing value for country-code"; fi
-if [[ -z "${STATE_OR_PROVINCE:-}" ]]; then error 1 "Missing value for state-or-province"; fi
-if [[ -z "${CITY:-}" ]]; then error 1 "Missing value for city"; fi
-if [[ -z "${ORGANIZATION_NAME:-}" ]]; then error 1 "Missing value for organization-name"; fi
-if [[ -z "${ORGANIZATIONAL_UNIT:-}" ]]; then error 1 "Missing value for organizational-unit"; fi
-if [[ -z "${DOMAIN_NAME:-}" ]]; then error 1 "Missing value for domain-name"; fi
-if [[ -z "${EMAIL_ADDRESS:-}" ]]; then error 1 "Missing value for email-address"; fi
+[[ -n "${SERVER_ROLE:-}" ]] || error 1 "Missing value for server-role"
+[[ -n "${LOCATION:-}" ]] || error 1 "Missing value for location"
+[[ -n "${COUNTRY_CODE:-}" ]] || error 1 "Missing value for country-code"
+[[ -n "${STATE_OR_PROVINCE:-}" ]] || error 1 "Missing value for state-or-province"
+[[ -n "${CITY:-}" ]] || error 1 "Missing value for city"
+[[ -n "${ORGANIZATION_NAME:-}" ]] || error 1 "Missing value for organization-name"
+[[ -n "${ORGANIZATIONAL_UNIT:-}" ]] || error 1 "Missing value for organizational-unit"
+[[ -n "${DOMAIN_NAME:-}" ]] || error 1 "Missing value for domain-name"
+[[ -n "${EMAIL_ADDRESS:-}" ]] || error 1 "Missing value for email-address"
 
 ###########
 # Main
 ###########
 
-declare -r secrets_dir="secrets/certificates/${LOCATION:-us-wa}"
-declare -r compose_file="homebridge-${LOCATION:-us-wa}.yaml"
-mkdir -p "$secrets_dir"
+declare -r config_dir="${SERVER_ROLE}.config/${LOCATION}"
+declare -r certificate_request_env="${config_dir}/certificate-request.env"
+declare -r certificate_request_conf="${config_dir}/ssl/certificate-request.conf"
 
-envsubst < secrets/certificates/certificate-request.conf.template > "$secrets_dir/certificate-request.conf"
-envsubst < homebridge.yaml.template > "$compose_file"
+mkdir -p "${config_dir}/ssl" && envsubst < certificate-request.conf.template > "${certificate_request_conf}"
+success $"Generated: ${certificate_request_conf}"
 
-note "Generated:"
-note "  $secrets_dir/certificate-request.conf"
-note "  $compose_file"
-
-# Save exported environment variables to homebridge-$(LOCATION).env
-env_file="homebridge-${LOCATION}.env"
-
-cat > "$env_file" <<EOF
+cat > "${certificate_request_env}" <<EOF
+SERVER_ROLE="${SERVER_ROLE}"
 LOCATION="${LOCATION}"
 COUNTRY_CODE="${COUNTRY_CODE}"
 STATE_OR_PROVINCE="${STATE_OR_PROVINCE}"
@@ -145,4 +157,4 @@ DOMAIN_NAME="${DOMAIN_NAME}"
 EMAIL_ADDRESS="${EMAIL_ADDRESS}"
 EOF
 
-note "Saved environment variables to $env_file"
+success "Saved ${certificate_request_env}"

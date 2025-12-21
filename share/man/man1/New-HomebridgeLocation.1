@@ -1,0 +1,110 @@
+.\" SPDX-FileCopyrightText: 2016-2025 Noble Factor
+.\" SPDX-License-Identifier: MIT
+.TH New-HomebridgeLocation 1 "December 2025" "docker-homebridge" "User Commands"
+.SH NAME
+New-HomebridgeLocation \- Generate Homebridge artifacts and certificates for a location
+.SH SYNOPSIS
+New-HomebridgeLocation [OPTIONS]
+.SH DESCRIPTION
+Generates location-specific artifacts for Homebridge deployment, including:
+.IP \(bu 2
+Certificate request configuration (secrets/certificates/LOCATION/certificate-request.conf)
+.IP \(bu 2
+Docker Compose file (homebridge-LOCATION.yaml)
+.IP \(bu 2
+Environment variables file (homebridge-LOCATION.env)
+.PP
+The script supports two modes of operation:
+.IP 1. 3
+Load all parameters from an environment file using --env-file
+.IP 2. 3
+Specify individual parameters via command-line options
+.PP
+All parameters are required and must be provided through one of these methods.
+.SH OPTIONS
+.TP
+.B --env-file <file>
+Load all environment variables from the specified file. The file should contain KEY=VALUE pairs for: LOCATION, COUNTRY_CODE, STATE_OR_PROVINCE, CITY, ORGANIZATION_NAME, ORGANIZATIONAL_UNIT, DOMAIN_NAME, EMAIL_ADDRESS.
+.TP
+.B -l, --location <location>
+Set the location name (e.g., us-wa). Used in file names and certificate generation.
+.TP
+.B -c, --country-code <code>
+Two-letter country code (e.g., US).
+.TP
+.B -s, --state-or-province <state>
+State or province name.
+.TP
+.B -C, --city <city>
+City name.
+.TP
+.B -O, --organization-name <org>
+Organization name for certificates.
+.TP
+.B -U, --organizational-unit <unit>
+Organizational unit for certificates.
+.TP
+.B -D, --domain-name <domain>
+Fully qualified domain name.
+.TP
+.B -E, --email-address <email>
+Email address for certificate requests.
+.TP
+.B -h, --help
+Show usage information and exit.
+.SH GENERATED FILES
+.TP
+.I secrets/certificates/LOCATION/certificate-request.conf
+OpenSSL certificate request configuration file generated from the template.
+.TP
+.I homebridge-LOCATION.yaml
+Docker Compose file for the Homebridge service at this location.
+.TP
+.I homebridge-LOCATION.env
+Environment variables file containing all the specified parameters for future reference.
+.SH USAGE
+.SS Using an environment file:
+.RS
+.nf
+\fB./build/New-HomebridgeLocation --env-file=homebridge-us-wa.env\fR
+.fi
+.RE
+.SS Using command-line options:
+.RS
+.nf
+\fB./build/New-HomebridgeLocation \\
+  --location=us-wa \\
+  --country-code=US \\
+  --state-or-province=Washington \\
+  --city=Seattle \\
+  --organization-name="My Organization" \\
+  --organizational-unit="IT Department" \\
+  --domain-name=example.com \\
+  --email-address=admin@example.com\fR
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+0
+Success
+.TP
+1
+Error (missing required parameters, template not found, etc.)
+.SH DEPENDENCIES
+.TP
+.B Required:
+envsubst (from gettext package)
+.TP
+.B Templates:
+secrets/certificates/certificate-request.conf.template
+.br
+homebridge.yaml.template
+.SH SEE ALSO
+.BR envsubst (1),
+.BR openssl (1)
+.SH AUTHOR
+Noble Factor
+.SH COPYRIGHT
+Copyright \(co 2025 Noble Factor.
+.br
+Licensed under the MIT License.
