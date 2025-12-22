@@ -60,7 +60,7 @@ location_config_dir := $(project_root)/homebridge.config/$(LOCATION)
 
 ### CERTIFICATES
 
-certreq_template := $(project_root)/certificate-request.conf.template
+certreq_template := $(project_root)/build/templates/certificate-request.conf.template
 
 certificate_request_env := $(location_config_dir)/certificate-request.env
 certificates_root := $(location_config_dir)/ssl

@@ -142,7 +142,7 @@ declare -r config_dir="${SERVER_ROLE}.config/${LOCATION}"
 declare -r certificate_request_env="${config_dir}/certificate-request.env"
 declare -r certificate_request_conf="${config_dir}/ssl/certificate-request.conf"
 
-mkdir -p "${config_dir}/ssl" && envsubst < certificate-request.conf.template > "${certificate_request_conf}"
+mkdir -p "${config_dir}/ssl" && envsubst < "${script_root}/templates/certificate-request.conf.template" > "${certificate_request_conf}"
 success $"Generated: ${certificate_request_conf}"
 
 cat > "${certificate_request_env}" <<EOF
