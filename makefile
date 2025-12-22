@@ -32,18 +32,19 @@ CONTAINER_HOSTNAME ?= $(shell echo "homebridge-$(LOCATION)$$([[ $(CONTAINER_ENVI
 
 HOMEBRIDGE_VERSION ?= latest
 
-## IP_ADDRESS
+### IP_ADDRESS
 
 IP_ADDRESS ?=
 
-## IP_RANGE
+### IP_RANGE
 
 IP_RANGE ?=
 
-## TAG
+### TAG
 
 TAG ?= 1.0.0-preview.3
 
+### Export ensures the values of these variables are set for all recursive $(MAKE) invocations
 export LOCATION CONTAINER_DOMAIN_NAME CONTAINER_ENVIRONMENT CONTAINER_HOSTNAME HOMEBRIDGE_VERSION IP_ADDRESS IP_RANGE TAG
 
 ## VARIABLES
