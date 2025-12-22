@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
+
 services:
   homebridge:
     image: ${HOMEBRIDGE_IMAGE}
@@ -6,13 +10,19 @@ services:
     hostname: ${CONTAINER_HOSTNAME}
     domainname: ${CONTAINER_DOMAIN_NAME}
     networks:
-      homebridge_network:
+      docker_network:
         ipv4_address: ${IP_ADDRESS:-}
     restart: always
     cap_add:
       - SYS_ADMIN 
     devices:
       - /dev/fuse:/dev/fuse:rwm
+    volumes:
+      - type: bind
+        source: ${CONTAINER_VOLUME}
+        target: /homebridge
+        bind:
+            propagation: rprivate
     environment:
       NOBLEFACTOR_HOMEBRIDGE_LOCATION: ${LOCATION}
       PUID: 1000  # first user created on most systems
@@ -37,3 +47,7 @@ services:
         max-file: "1"
     security_opt:
       - apparmor:unconfined
+networks:
+  docker_network:
+     external: true
+     name: ${NETWORK_NAME}

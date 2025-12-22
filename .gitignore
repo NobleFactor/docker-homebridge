@@ -4,13 +4,8 @@
 
 /.github/copilot-instructions.md
 
-# Exclude all certificate files from secrets directory
-secrets/**/*.pem
-secrets/**/*.csr
-secrets/**/*.crt
-secrets/**/*.key
-secrets/certificates/*/
-!secrets/certificates/*.template
+# Exclude per-location deployment configurations
+/homebridge.config
 
 # Exclude generated environment files
 homebridge-*.yaml

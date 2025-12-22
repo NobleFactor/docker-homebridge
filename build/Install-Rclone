@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
 
-########################################################################################################################
-# Licensed under the MIT License - see LICENSE file for details.
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Noble Factor. All rights reserved.
-# Install-Rclone - Installs the current Rclone release and sets up mount commands.
-########################################################################################################################
+# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
+
+# Install-Rclone - Installs the current Rclone release and sets up mount commands
 
 # Installs the current Rclone release. This is likely newer than the one in the Debian-based system repos.
 # After installing, use 'rclone selfupdate' to upgrade rclone.

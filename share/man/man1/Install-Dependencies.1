@@ -1,0 +1,41 @@
+.\" SPDX-FileCopyrightText: 2016-2025 Noble Factor
+.\" SPDX-License-Identifier: MIT
+.TH Install-Dependencies 1 "December 2025" "docker-homebridge" "User Commands"
+.SH NAME
+Install-Dependencies \- Install required dependencies for docker-homebridge
+.SH SYNOPSIS
+Install-Dependencies
+.SH DESCRIPTION
+Installs required system packages and dependencies for the docker-homebridge project. This script performs the following actions:
+.IP \(bu 2
+Updates apt package lists
+.IP \(bu 2
+Installs required packages: curl, gawk, grepcidr, ipcalc, jq, zip, unzip
+.IP \(bu 2
+Calls Install-Docker to install Docker CE and related components
+.IP \(bu 2
+Calls Install-Rclone to install the latest Rclone release
+.PP
+This script must be run with sudo/root privileges.
+.SH USAGE
+.RS
+.nf
+sudo ./build/Install-Dependencies
+.fi
+.RE
+.SH DEPENDENCIES
+.TP
+.B Required:
+apt, apt-get (Debian/Ubuntu package managers)
+.TP
+.B Installed packages:
+curl, gawk, grepcidr, ipcalc, jq, zip, unzip
+.SH SEE ALSO
+.BR Install-Docker (1),
+.BR Install-Rclone (1)
+.SH AUTHOR
+Noble Factor
+.SH COPYRIGHT
+Copyright \(co 2025 Noble Factor.
+.br
+Licensed under the MIT License.

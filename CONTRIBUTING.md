@@ -1,7 +1,5 @@
 # Contributing to docker-homebridge
 
-# Contributing to docker-homebridge
-
 Welcome. This guide is for humans contributing to this repository. Automation-specific rules live in `.github/COPILOT_INSTRUCTIONS.md`.
 
 ## How we work (short version)
@@ -19,12 +17,12 @@ Welcome. This guide is for humans contributing to this repository. Automation-sp
 - Use focused PRs. Small, single‑purpose changes are easier to review and roll back.
 - Follow the PR template checklist. Show pre‑approval, scope control, and validation steps.
 - Prefer conventional commits for messages (e.g., `fix: ...`, `feat: ...`, `docs: ...`).
-- Link issues where relevant.
+- Link issues where relevant.ß
 
 ## Development setup
 
 - Use Make targets instead of raw Docker commands when possible.
-    - Examples: `make New-HomebridgeImage`, `make Start-Homebridge`.
+  - Examples: `make New-HomebridgeImage`, `make Start-Homebridge`.
 - Scripts use bash with strict flags; many source `build/Declare-BashScript` which manages shell options.
 
 ## Shell scripts: standards and template
@@ -73,9 +71,9 @@ Guidelines:
 - Use explicit, descriptive long options (e.g., `--test-location`).
 - Defaults: test location defaults to `fake-wa` unless overridden.
 - Template paths are project‑root relative and hard‑wired:
-    - `./homebridge.yaml.template`
-    - `./secrets/certificates/certificate-request.conf.template`
-- Generated artifacts live in `./` and `./secrets/<test-location>`.
+  - `./homebridge.yaml.template`
+  - `./build/templates/certificate-request.conf.template`
+- Generated artifacts live in `./` and `./homebridge.config/<test-location>/certificates/`.
 - Baselines live in `./test/baseline/<test-location>` and `./test/baseline/homebridge-<test-location>.yaml`.
 - If a script sources `Declare-BashScript`, don’t add another `set -euo pipefail`—it’s already handled.
 - Keep variables/args minimal—include only what’s required for logic and comparison.

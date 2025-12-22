@@ -1,4 +1,0 @@
-networks:
-  homebridge_network:
-    external: true
-    name: ${NETWORK_NAME}
