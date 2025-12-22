@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
 
-########################################################################################################################
-# Licensed under the MIT License - see LICENSE file for details.
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Noble Factor. All rights reserved.
-# Install-Dependencies - Installs required dependencies for docker-homebridge.
-########################################################################################################################
+# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
+
+# Install-Dependencies - Installs required dependencies for docker-homebridge
 
 source "$(dirname "$0")/Declare-BashScript" "$0" "" "" "$@"
 
