@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
+
 # SPDX-License-Identifier: MIT
-
-########################################################################################################################
-# Licensed under the MIT License - see LICENSE file for details.
 # Copyright (c) 2025 Noble Factor. All rights reserved.
-# Declare-BashScript - Provides argument parsing and utility functions for bash scripts.
-########################################################################################################################
+# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
 
-# Source this file as follows: 
-#   source Declare-BashScript <script_path> <long-options> <short-options>
-# Example: 
-#   source Declare-BashScript $0 "help,verbose,path:," "hvp" "$@"
+# Declare-BashScript - Bash script argument and option parsing helper
 
 set -o errexit -o nounset -o pipefail
 
@@ -23,18 +17,127 @@ declare -r script_name="$(basename "$1")"
 declare -r script_long_options="${2:-}"
 declare -r script_options="${3:-}"
 
-shift 3 || shift 2 || shift 1 ;# Shift past the first three arguments to leave only the options for parsing
+shift 3 || shift 2 || shift 1 # Shift past the first three arguments to leave only the options for parsing
 
 ###########
 # Functions
 ###########
+
+function install_script_to_local {
+    local src_script="${script_root}/${script_name}"
+    local src_man="${script_root}/../share/man/man1/${script_name}.1"
+    local src_bash_completion="${script_root}/../share/bash-completion/completions/${script_name}"
+    local src_zsh_completion="${script_root}/../share/zsh/site-functions/_${script_name}"
+
+    local dest_bin="${HOME}/.local/bin/${script_name}"
+    local dest_man="${HOME}/.local/share/man/man1/${script_name}.1"
+    local dest_bash_completion="${HOME}/.local/share/bash-completion/completions/${script_name}"
+    local dest_zsh_completion="${HOME}/.local/share/zsh/site-functions/_${script_name}"
+
+    mkdir -p "${HOME}/.local/bin" "${HOME}/.local/share/man/man1" \
+        "${HOME}/.local/share/bash-completion/completions" \
+        "${HOME}/.local/share/zsh/site-functions"
+
+    ln -sf "${src_script}" "${dest_bin}"
+    note "Linked script to ${dest_bin}"
+
+    if [[ -f "${src_man}" ]]; then
+        ln -sf "${src_man}" "${dest_man}"
+        note "Linked man page to ${dest_man}"
+    fi
+
+    if [[ -f "${src_bash_completion}" ]]; then
+        ln -sf "${src_bash_completion}" "${dest_bash_completion}"
+        note "Linked bash completion to ${dest_bash_completion}"
+    fi
+
+    if [[ -f "${src_zsh_completion}" ]]; then
+        ln -sf "${src_zsh_completion}" "${dest_zsh_completion}"
+        note "Linked zsh completion to ${dest_zsh_completion}"
+    fi
+
+    # Also install Declare-BashScript itself
+    local declare_src="${script_root}/Declare-BashScript"
+    local declare_dest_bin="${HOME}/.local/bin/Declare-BashScript"
+    local declare_dest_man="${HOME}/.local/share/man/man1/Declare-BashScript.1"
+    local declare_dest_bash_completion="${HOME}/.local/share/bash-completion/completions/Declare-BashScript"
+    local declare_dest_zsh_completion="${HOME}/.local/share/zsh/site-functions/_Declare-BashScript"
+
+    ln -sf "${declare_src}" "${declare_dest_bin}"
+    note "Linked Declare-BashScript to ${declare_dest_bin}"
+
+    if [[ -f "${script_root}/../share/man/man1/Declare-BashScript.1" ]]; then
+        ln -sf "${script_root}/../share/man/man1/Declare-BashScript.1" "${declare_dest_man}"
+        note "Linked Declare-BashScript man page to ${declare_dest_man}"
+    fi
+
+    if [[ -f "${script_root}/../share/bash-completion/completions/Declare-BashScript" ]]; then
+        ln -sf \
+            "${script_root}/../share/bash-completion/completions/Declare-BashScript" \
+            "${declare_dest_bash_completion}"
+        note "Linked Declare-BashScript bash completion to ${declare_dest_bash_completion}"
+    fi
+
+    if [[ -f "${script_root}/../share/zsh/site-functions/_Declare-BashScript" ]]; then
+        ln -sf "${script_root}/../share/zsh/site-functions/_Declare-BashScript" "${declare_dest_zsh_completion}"
+        note "Linked Declare-BashScript zsh completion to ${declare_dest_zsh_completion}"
+    fi
+
+    success "Installed ${script_name} and Declare-BashScript to ~/.local"
+}
+
+function Set-Environment {
+    local envFile
+    local whitelist
+
+    # Optional first args: --whitelist "VAR1 VAR2 ..."
+    if [[ "$1" == "--whitelist" ]]; then
+        whitelist="$2"
+        shift 2
+    fi
+
+    for envFile in "$@"; do
+        while read -r line; do
+
+            trimmed_line="$(echo ${line} | xargs)"
+            [[ -z ${trimmed_line:-} ]] || [[ "${trimmed_line}" =~ ^#.* ]] && continue
+
+            # Parse export VAR="value" or VAR="value"
+            if [[ $trimmed_line =~ ^export[[:space:]]+([^=]+)=(.*)$ ]]; then
+                name="${BASH_REMATCH[1]}"
+                value="${BASH_REMATCH[2]}"
+            else
+                IFS='=' read -r name value <<<"$trimmed_line"
+            fi
+
+            # Trim whitespace
+            name="${name#"${name%%[![:space:]]*}"}"
+            name="${name%"${name##*[![:space:]]}"}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+
+            # Strip outer quotes from value
+            if [[ $value =~ ^\"(.*)\"$ ]]; then
+                value="${BASH_REMATCH[1]}"
+            elif [[ $value =~ ^\'(.*)\'$ ]]; then
+                value="${BASH_REMATCH[1]}"
+            fi
+
+            # If whitelist is provided, ensure name is in whitelist
+            if [[ -z "$whitelist" || " $whitelist " == *" $name "* ]]; then
+                export "$name"="$value"
+                note "export $name=\"$value\""
+            fi
+        done <"$envFile"
+    done
+}
 
 function usage {
     local _synopsis="${1:-}"
 
     # Require a synopsis so callers can provide a fallback when man is unavailable
     if [[ -z "$_synopsis" ]]; then
-        printf '[%s][ERROR] \033[31m%s\033[0m usage() requires a synopsis argument.\n' "$script_name" "$Heavy_ballot" >&2
+        printf '[%s] \033[31m%s\033[0m usage() requires a synopsis argument.\n' "$script_name" "$Heavy_ballot" >&2
         exit 2
     fi
 
@@ -44,9 +147,9 @@ function usage {
         exit 0
     fi
 
-    # Fallback to a script-relative man path if present
-    if man -M "${script_root}/man" -w "${script_name}" >/dev/null 2>&1; then
-        man -M "${script_root}/man" "${script_name}"
+    # Fallback to share/man relative to script root
+    if man -M "${script_root}/../share/man" -w "${script_name}" >/dev/null 2>&1; then
+        man -M "${script_root}/../share/man" "${script_name}"
         exit 0
     fi
 
@@ -58,18 +161,21 @@ function usage {
 function error {
     local rc=$1
     shift 1
-    printf '[%s][ERROR] \033[31m%s\033[0m %s\n' "$script_name" "$Heavy_ballot" "$@" >&2
-    if (( $rc != 0 )); then
-        exit $rc
+    printf '[%s] [\033[31m%s\033[0m] %s\n' "$script_name" "$Heavy_ballot" "$@" >&2
+    if ((rc != 0)); then
+        exit "$rc"
     fi
 }
 
 function note {
-    printf "[%s][NOTE] %s\n" "$script_name" "$@" >&2
+    if [[ -n ${SILENT:-} ]]; then
+        return
+    fi
+    printf "[%s] [+] %s\n" "$script_name" "$@" >&2
 }
 
 function success {
-    printf '[%s][SUCCESS] \033[32m%s\033[0m %s\n' "$script_name" "$Heavy_check_mark" "$@" >&2
+    printf '[%s] [\033[32m%s\033[0m] %s\n' "$script_name" "$Heavy_check_mark" "$@" >&2
 }
 
 ###########
@@ -78,10 +184,10 @@ function success {
 
 # useful for printing text to console...
 
-declare -r b="$(tput bold)"  ; # bold
-declare -r n="$(tput sgr0)"  ; # normal
-declare -r u="$(tput smul)"  ; # underline
-declare -r u_="$(tput rmul)" ; # underline off (neither $n nor $b defeat $u)
+declare -r b="$(tput bold)"  # bold
+declare -r n="$(tput sgr0)"  # normal
+declare -r u="$(tput smul)"  # underline
+declare -r u_="$(tput rmul)" # underline off (neither $n nor $b defeat $u)
 
 declare -r Heavy_ballot='✘'
 declare -r Heavy_check_mark='✔'
@@ -92,6 +198,6 @@ declare -r Heavy_check_mark='✔'
 
 declare -r script_arguments=$(getopt -n "${script_name}" -o "$script_options" --long "$script_long_options" -- "$@")
 
-if [ $? -ne 0 ]; then
+if (($? != 0)); then
     error 1 "Unable to parse arguments: $arguments"
 fi

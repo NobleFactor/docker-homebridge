@@ -1,43 +1,39 @@
-.TH NEW-DOCKERNETWORK 1 "October 2025" "Noble Factor" "User Commands"
+.\" SPDX-FileCopyrightText: 2016-2025 Noble Factor
+.\" SPDX-License-Identifier: MIT
+.TH New-DockerNetwork 1 "December 2025" "Noble Factor" "User Commands"
 .SH NAME
-New-DockerNetwork \- create a docker network using Noble Factor conventions
+New-DockerNetwork \- create a Docker network using Noble Factor conventions
 .SH SYNOPSIS
-.B New-DockerNetwork
+New-DockerNetwork [OPTIONS] SERVICE-NAME
 [\fB\-h\fR|\fB\-\-help\fR]
 [\fB\-\-device\fR=\fIDEVICE-NAME\fR]
 [\fB\-d\fR|\fB\-\-driver\fR=\fIDRIVER-NAME\fR]
 [\fB\-\-ip-range\fR=\fIIP-RANGE\fR]
 \fISERVICE-NAME\fR
 .SH DESCRIPTION
-Create a docker network using Noble Factor conventions. The network is named as 
+Create a Docker network using Noble Factor conventions. The network is named as 
 \fISERVICE-NAME\fB:\fIDEVICE-NAME\fR. If you do not specify a device name, the 
 default device name is used. On Linux, the default is obtained from the operating 
 system using \fBip route show default\fR. On macOS, the default is obtained from the 
 operating system using \fBscutil --dns\fR.
 .PP
 Note that IPv6 and macvlan networks can only be created on Linux hosts.
-.SH OPTIONS
+.SH ARGUMENTS
 .TP
-\fISERVICE-NAME\fR
+.B SERVICE-NAME
 A docker service name.
 .TP
-\fB\-h\fR, \fB\-\-help\fR
+.B -h, --help
 Print this text and exit.
 .TP
-\fB\-d\fR, \fB\-\-device\fR=\fIDEVICE-NAME\fR
-Parent network device name. Default: On Linux, the primary network interface as
-reported by \fBip route show default\fR. On macOS, the primary 
-network interface as returned by \fBscutil --dns\fR.
+.B -d, --device DEVICE-NAME
+Parent network device name. Default: On Linux, the primary network interface as reported by 'ip route show default'. On macOS, the primary network interface as returned by 'scutil --dns'.
 .TP
-\fB\-D\fR, \fB\-\-driver\fR=\fIDRIVER-NAME\fR
+.B -D, --driver DRIVER-NAME
 Driver type. Default: macvlan.
 .TP
-\fB\-\-ip\-range\fR=\fIIP-RANGE\fR
-Allocate container IPv4 addresses from a CIDR block. Example: 192.168.8/29 which
-allocates a block of 5 IP addresses in the range [9,14]. \fBipcalc\fR is a convenient
-tool for computing CIDR block values. By default \fBdocker\fR allocates container
-addresses from the entire IPv4 subnet. Ensure that the CIDR block you specify is unused by,
-for example, your local DHCP server.
+.B --ip-range IP-RANGE
+Allocate container IPv4 addresses from a CIDR block. Example: 192.168.8/29 allocates a block of 5 IP addresses in the range [9,14]. 'ipcalc' is a convenient tool for computing CIDR block values. By default, docker allocates container addresses from the entire IPv4 subnet. Ensure that the CIDR block you specify is unused by, for example, your local DHCP server.
 .SH BEHAVIOR
 The script automatically:
 .IP \(bu 2
@@ -82,10 +78,13 @@ Create a network with bridge driver:
 .SH EXIT STATUS
 .TP
 0
+.I \fBdocker\fR, \fBsudo\fR, \fBgetopt\fR, \fBuname\fR
 Success
 .TP
+.I \fBscutil\fR, \fBipcalc\fR, \fBifconfig\fR, \fBtraceroute\fR
 1
 Error (invalid arguments, unsupported OS, network creation failure, etc.)
+.I \fBnmcli\fR, \fBipcalc\fR
 .SH DEPENDENCIES
 .TP
 .B Required commands:
@@ -101,7 +100,11 @@ nmcli, ipcalc
 .I Declare-BashScript
 Sourced utility script for argument parsing and error handling
 .SH AUTHOR
-Noble Factor
+David Noble
+.SH COPYRIGHT
+Copyright \(co 2016-2025 Noble Factor.
+.br
+Licensed under the MIT License.
 .SH SEE ALSO
 .BR docker-network-create (1),
 .BR docker-network (1),

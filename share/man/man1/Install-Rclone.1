@@ -1,0 +1,90 @@
+.\" SPDX-FileCopyrightText: 2016-2025 Noble Factor
+.\" SPDX-License-Identifier: MIT
+.TH Install-Rclone 1 "December 2025" "Noble Factor" "User Commands"
+.SH NAME
+Install-Rclone \- Install the latest Rclone release
+.SH SYNOPSIS
+Install-Rclone [OPTIONS]
+.SH DESCRIPTION
+Downloads and installs the current Rclone release directly from rclone.org. This version is typically newer than the one available in Debian/Ubuntu system repositories. The script performs the following actions:
+.IP \(bu 2
+Detects system architecture (x86_64, aarch64, armv7l, armv6l, i686, i386)
+.IP \(bu 2
+Ensures required tools (curl, unzip) are installed
+.IP \(bu 2
+Downloads the appropriate Rclone binary for the detected platform
+.IP \(bu 2
+Removes any existing Rclone package installed via apt-get
+.IP \(bu 2
+Installs the binary to /usr/bin/rclone with correct permissions
+.IP \(bu 2
+Creates directories /var/lib/rclone and /var/log/rclone
+.IP \(bu 2
+Installs the man page to /usr/local/share/man/man1/
+.IP \(bu 2
+Updates the man database
+.IP \(bu 2
+Cleans up downloaded files
+.PP
+After installation, use 'rclone selfupdate' to upgrade to newer versions.
+.PP
+This script must be run with sudo/root privileges.
+.SH OPTIONS
+.TP
+.B -h, --help
+Show usage information and exit.
+.SH SUPPORTED ARCHITECTURES
+.TP
+.B x86_64
+Intel/AMD 64-bit (linux-amd64)
+.TP
+.B aarch64
+ARM 64-bit (linux-arm64)
+.TP
+.B armv7l, armv6l
+ARM 32-bit (linux-arm)
+.TP
+.B i686, i386
+Intel/AMD 32-bit (linux-386)
+.SH USAGE
+.RS
+.nf
+\fBsudo ./build/Install-Rclone\fR
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+0
+Success
+.TP
+1
+Error (unsupported architecture, missing dependencies, download failure, etc.)
+.SH DEPENDENCIES
+.TP
+.B Required:
+curl, unzip
+.IP
+These will be automatically installed via apt-get if missing.
+.SH FILES
+.TP
+.I /usr/bin/rclone
+Rclone binary
+.TP
+.I /usr/local/share/man/man1/rclone.1
+Rclone man page
+.TP
+.I /var/lib/rclone
+Rclone data directory
+.TP
+.I /var/log/rclone
+Rclone log directory
+.SH SEE ALSO
+.BR rclone (1)
+.PP
+Rclone homepage: https://rclone.org/
+.SH AUTHOR
+Noble Factor
+.SH COPYRIGHT
+Copyright \(co 2025 Noble Factor.
+.br
+Licensed under the MIT License.

@@ -37,34 +37,38 @@ function get_linkname() {
 
     case "${network_driver}" in
     bridge)
-        # When using the bridge network driver, Docker creates a virtual Ethernet bridge on the host machine. This 
+        # When using the bridge network driver, Docker creates a virtual Ethernet bridge on the host machine. This
         # bridge acts as a virtual switch that connects all containers attached to the bridge network. Each container
         # gets its own virtual Ethernet interface (veth) that is connected to the bridge. The naming convention for
         # these interfaces starts with "br-" followed by the first 12 characters of the network ID.
         # Noteworthy: com.docker.network.bridge.inhibit_ipv4
-        # For user-defined bridge networks, if you set the com.docker.network.bridge.inhibit_ipv4 option to true 
-        # during network creation, Docker will not assign an IPv4 gateway address to the bridge interface. While 
+        # For user-defined bridge networks, if you set the com.docker.network.bridge.inhibit_ipv4 option to true
+        # during network creation, Docker will not assign an IPv4 gateway address to the bridge interface. While
         # the IP link for the container itself is still created, the bridge itself won't have a default gateway IP,
         # requiring manual configuration if north-south traffic is desired.
         echo "br-${network_id}"
-        return;;
+        return
+        ;;
     ipvlan|macvlan)
         # When using ipvlan or macvlan network drivers, containers are given their own MAC addresses (macvlan) or IP
         # addresses (ipvlan and macvlan) directly on the host's physical network interface, rather than being routed
         # through a Docker-managed bridge. In these cases, Docker does not create a separate IP link for a bridge, as
         # the container becomes a first-class citizen on the host's network.
         echo ""
-        return;;
+        return
+        ;;
     host)
         # When the host network mode, containers share the network namespace of the host machine. This means the
         # container directly uses the host's network interfaces, including its IP addresses and routing table. No
         # separate IP link is created for the container's network, as it's not isolated in its own network namespace.
         echo ""
-        return ;;
+        return
+        ;;
     none)
         # When the none network mode is used, the container has no network interfaces apart from a loopback interface.
         echo ""
-        return;;
+        return
+        ;;
     overlay)
         error 1 "Unsupported network driver: ${network_driver}"
         ;;
@@ -111,7 +115,7 @@ while :; do
         ;;
     esac
 done
- 
+
 if [[ -z ${device_name:-} ]]; then
     case $OSTYPE in
     darwin*)
@@ -131,9 +135,9 @@ if [[ -z ${driver_name:-} ]]; then
     case $OSTYPE in
     darwin*)
         declare -r driver_name=bridge
-        ;;  
+        ;;
     linux-gnu*)
-        declare -r driver_name=macvlan 
+        declare -r driver_name=macvlan
         ;;
     esac
 fi
@@ -181,7 +185,7 @@ darwin*)
 linux-gnu*)
     
     declare -r ipv4_address="$(nmcli --escape no --get-values IP4.ADDRESS device show "${device_name}" | head -n 1)"
-    
+
     if [[ -z "${ipv4_address}" ]]; then
         error 1 "No IPv4 address found for device: ${device_name}"
     fi
