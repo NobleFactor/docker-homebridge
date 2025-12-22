@@ -21,7 +21,7 @@ eval set -- "$script_arguments"
 
 while :; do
     case "$1" in
-        -h|--help)
+    -h | --help)
         usage "$synopsis"
         shift 1
         ;;
