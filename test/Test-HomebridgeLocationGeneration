@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
 
-########################################################################################################################
-# Licensed under the MIT License - see LICENSE file for details.
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Noble Factor. All rights reserved.
-# Test-HomebridgeLocationGeneration - Automated test for Homebridge location-based artifact and certificate generation.
-########################################################################################################################
+# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
+
+# Test-HomebridgeLocationGeneration - Automated test for Homebridge location-based artifact and certificate generation
 
 source "$(dirname "$0")/../build/Declare-BashScript" "$0" "test-location:,help" "" "$@"
 

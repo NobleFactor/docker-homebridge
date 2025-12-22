@@ -1,7 +1,5 @@
 # Contributing to docker-homebridge
 
-# Contributing to docker-homebridge
-
 Welcome. This guide is for humans contributing to this repository. Automation-specific rules live in `.github/COPILOT_INSTRUCTIONS.md`.
 
 ## How we work (short version)
@@ -19,12 +17,12 @@ Welcome. This guide is for humans contributing to this repository. Automation-sp
 - Use focused PRs. Small, single‑purpose changes are easier to review and roll back.
 - Follow the PR template checklist. Show pre‑approval, scope control, and validation steps.
 - Prefer conventional commits for messages (e.g., `fix: ...`, `feat: ...`, `docs: ...`).
-- Link issues where relevant.
+- Link issues where relevant.ß
 
 ## Development setup
 
 - Use Make targets instead of raw Docker commands when possible.
-    - Examples: `make New-HomebridgeImage`, `make Start-Homebridge`.
+  - Examples: `make New-HomebridgeImage`, `make Start-Homebridge`.
 - Scripts use bash with strict flags; many source `build/Declare-BashScript` which manages shell options.
 
 ## Shell scripts: standards and template
