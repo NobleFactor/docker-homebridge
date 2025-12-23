@@ -1,0 +1,16 @@
+# Pre-commit configuration for static analysis and formatting of all Bash scripts
+repos:
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: ShellCheck static analysis
+        entry: bash -c 'head -n1 "$1" | grep -qE "^#!/usr/bin/env bash|^#!/bin/bash" && shellcheck "$1" || exit 0'
+        language: system
+        types: [shell]
+        files: ^(build|test)/.*$
+      - id: shfmt
+        name: shfmt formatting
+        entry: bash -c 'head -n1 "$1" | grep -qE "^#!/usr/bin/env bash|^#!/bin/bash" && shfmt -i 4 -ci -s "$1" || exit 0'
+        language: system
+        types: [shell]
+        files: ^(build|test)/.*$

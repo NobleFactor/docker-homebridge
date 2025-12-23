@@ -17,7 +17,6 @@ source "$(dirname "$0")/Declare-BashScript" "$0" "help" "h" "$@"
 
 declare -r synopsis="Installs Docker and verifies installation."
 eval set -- "$script_arguments"
-[[ $* != -- ]] || usage "$synopsis"
 
 while :; do
     case "$1" in
@@ -26,14 +25,11 @@ while :; do
         shift 1
         ;;
     --)
-        shift
-        break
-        ;;
+        shift 1
+        break;;
     *)
-        break
-        ;;
+        break;;
     esac
-    [[ $# -eq 0 ]] && break
 done
 
 ## Ensure all conflicting packages are absent

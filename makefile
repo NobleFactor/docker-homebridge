@@ -16,11 +16,18 @@ SHELL := bash
 .ONESHELL:
 .SILENT:
 
+### PROJECT
+
+project_name := homebridge
+project_root := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
+project_file := $(project_root)/compose.yaml
+
 ## PARAMETERS
 
-### LOCATION
+### LOCATION (of deployment)
 
 LOCATION ?= $(shell curl --fail --silent "http://ip-api.com/json?fields=countryCode,region" | jq --raw-output '"\(.countryCode)-\(.region)"')
+location_config_dir := $(project_root)/$(project_name).config/$(LOCATION)
 
 ### CONTAINER_*
 
@@ -32,32 +39,32 @@ CONTAINER_HOSTNAME ?= $(shell echo "homebridge-$(LOCATION)$$([[ $(CONTAINER_ENVI
 
 HOMEBRIDGE_VERSION ?= latest
 
-### IP_ADDRESS
-
-IP_ADDRESS ?=
-
-### IP_RANGE
-
-IP_RANGE ?=
-
 ### TAG
 
 TAG ?= 1.0.0-preview.3
 
-### Export ensures the values of these variables are set for all recursive $(MAKE) invocations
-export LOCATION CONTAINER_DOMAIN_NAME CONTAINER_ENVIRONMENT CONTAINER_HOSTNAME HOMEBRIDGE_VERSION IP_ADDRESS IP_RANGE TAG
+### PER-INSTANCE NETWORK CONFIG (Makefile syntax)
 
-## VARIABLES
+network_config_file := $(location_config_dir)/$(CONTAINER_ENVIRONMENT).network-config.mk
 
-### PROJECT
+ifneq ($(wildcard $(network_config_file)),)
 
-project_name := homebridge
-project_root := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
-project_file := $(project_root)/compose.yaml
+    error_message := $(shell awk -F= '/^[[:space:]]*#/ { next } /^[[:space:]]*$$/ { next } !/^[[:space:]]*(IP_ADDRESS|IP_RANGE|MAC_ADDRESS)[[:space:]]*[:?]?=/ { printf("Invalid key or line: %s\n", $$0); exit 1 } !/^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*[:?]?=/ { printf("Invalid assignment: %s\n", $$0); exit 1 }' $(network_config_file) 2>&1)
+
+    ifneq ($(error_message),)
+        $(error Invalid network configuration for container $(CONTAINER_HOSTNAME): $(error_message))
+    endif
+
+    include $(network_config_file)
+
+endif
+
+export LOCATION CONTAINER_DOMAIN_NAME CONTAINER_ENVIRONMENT CONTAINER_HOSTNAME HOMEBRIDGE_VERSION TAG
+export IP_ADDRESS IP_RANGE MAC_ADDRESS
+
+## VARIABLES (static)
 
 HOMEBRIDGE_IMAGE := noblefactor/$(project_name):$(TAG)
-
-location_config_dir := $(project_root)/homebridge.config/$(LOCATION)
 
 ### CERTIFICATES
 
@@ -71,36 +78,6 @@ certificates := $(certificates_root)/certificate.pem $(certificates_root)/privat
 ### RCLONE CONFIG
 
 rclone_conf_file := $(project_root)/homebridge.config/rclone.conf
-
-### PER-INSTANCE NETWORK CONFIG (Makefile syntax)
-
-network_config_file := $(location_config_dir)/$(CONTAINER_ENVIRONMENT).network-config.mk
-
-ifneq ($(wildcard $(network_config_file)),)
-
-	error_message := $(shell awk -F= '
-		/^[[:space:]]*#/ { 
-            next
-        }
-		/^[[:space:]]*$$/ { 
-            next
-        }
-		!/^[[:space:]]*(IP_ADDRESS|IP_RANGE|MAC_ADDRESS)[[:space:]]*=/ {
-			printf("Invalid key or line: %s\n", $$0)
-            exit 1
-        }
-		!/^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=/ {
-			printf("Invalid assignment: %s\n", $$0)
-            exit 1
-        }' $(network_config_file) 2>&1)
-
-	ifneq ($(error_message),)
-		$(error Invalid network configuration for container $(CONTAINER_HOSTNAME): $(error_message))
-	endif
-
-	include $(network_config_file)
-
-endif
 
 ### CONTAINER VOLUME
 
@@ -279,7 +256,7 @@ New-HomebridgeCertificates: $(certificate_request_conf) ## Generate self-signed 
 
 Update-HomebridgeCertificates: $(certificates) ## Copy certificates into container volume for LOCATION
 	mkdir --parent "$(container_config)/ssl"
-	cp --verbose $^ $(container_config)/ssl"
+	cp --verbose $^ "$(container_config)/ssl"
 	echo -e "\n\033[1mWhat's next:\033[0m"
 	echo "    Ensure that Homebridge in $(LOCATION) loads new certificates: make Restart-Homebridge"
 
