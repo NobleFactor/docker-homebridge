@@ -112,9 +112,49 @@ Linux)
 esac
 
 if command -v pre-commit >/dev/null; then
-    note "Setting up pre-commit hooks..."
-    pre-commit install
-    # TODO (david-noble) create default .pre-commit-config, .pre-commit-hooks, ... files on the repo root
+        note "Setting up pre-commit hooks..."
+        # Create default .pre-commit-config.yaml if missing
+        if [ ! -f .pre-commit-config.yaml ]; then
+                cat > .pre-commit-config.yaml <<'EOF'
+- repo: local
+    hooks:
+        - id: shellcheck
+            name: ShellCheck static analysis
+            entry: bash -c 'head -n1 "$1" | grep -qE "^#!/usr/bin/env bash|^#!/bin/bash" && shellcheck "$1" || exit 0'
+            language: system
+            types: [shell]
+            files: ^(build|test)/.*$
+        - id: shfmt
+            name: shfmt formatting
+            entry: bash -c 'head -n1 "$1" | grep -qE "^#!/usr/bin/env bash|^#!/bin/bash" && shfmt -i 4 -ci -s "$1" || exit 0'
+            language: system
+            types: [shell]
+            files: ^(build|test)/.*$
+EOF
+        fi
+        # Create default .pre-commit-hooks.yaml if missing
+        if [ ! -f .pre-commit-hooks.yaml ]; then
+                cat > .pre-commit-hooks.yaml <<'EOF'
+- id: shellcheck
+    name: ShellCheck static analysis
+    entry: bash -c 'head -n1 "$1" | grep -qE "^#!/usr/bin/env bash|^#!/bin/bash" && shellcheck "$1" || exit 0'
+    language: system
+    types: [shell]
+    files: ^(build|test)/.*$
+- id: shfmt
+    name: shfmt formatting
+    entry: bash -c 'head -n1 "$1" | grep -qE "^#!/usr/bin/env bash|^#!/bin/bash" && shfmt -i 4 -ci -s "$1" || exit 0'
+    language: system
+    types: [shell]
+    files: ^(build|test)/.*$
+EOF
+        fi
+        pre-commit install
 else
     error 1 "pre-commit not installed; skipping setup."
+fi
+
+# Initialize and update the wiki submodule if not already present
+if [ ! -d "wiki/.git" ]; then
+    git submodule update --init --recursive
 fi
