@@ -145,12 +145,11 @@ RUN mkdir -p\
  /etc/s6-overlay/s6-rc.d/rclone-backups-run/dependencies.d\
  /etc/s6-overlay/s6-rc.d/rclone-backups-log\
  /etc/s6-overlay/s6-rc.d/rclone-credits
- 
+
 ### rclone-credits (oneshot)
 
 RUN touch /etc/s6-overlay/s6-rc.d/rclone-credits/up && chmod +x /etc/s6-overlay/s6-rc.d/rclone-credits/up && cat > /etc/s6-overlay/s6-rc.d/rclone-credits/up <<EOF
 #!/bin/sh
-# Display rclone manifest during startup
 cat /opt/homebridge/Rclone.manifest
 EOF
 
@@ -160,7 +159,7 @@ RUN touch /etc/s6-overlay/s6-rc.d/rclone-backups-init/up && chmod +x /etc/s6-ove
 #!/command/execlineb -P
 foreground { mkdir -p /homebridge/.cache/rclone }
 foreground { mkdir -p /homebridge/backups }
-foreground { chown -R homebridge:root /homebridge/.cache/rclone /homebridge/backups }
+foreground { chown --recursive -v homebridge:homebridge /homebridge/.cache/rclone /homebridge/backups }
 EOF
 
 ### rclone-backups-run (longrun)
@@ -245,7 +244,7 @@ if [[ -n "${PUID:-}" ]] || [[ -n "${PGID:-}" ]]; then
     fi
   
     echo "Updating /homebridge ownership..."
-    chown --recursive homebridge:homebridge /homebridge
+    chown --recursive -v homebridge:homebridge /homebridge
 fi
 
 echo "homebridge user: $(id homebridge)"
