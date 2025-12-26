@@ -25,8 +25,8 @@ services:
             propagation: rprivate
     environment:
       NOBLEFACTOR_HOMEBRIDGE_LOCATION: ${LOCATION}
-      PUID: 1000  # first user created on most systems
-      PGID: 0     # root group => can elevate permissions if needed
+      PUID: 1000  # homebridge user id is first user created on most systems
+      PGID:       # homebridge group id is unchanged
     healthcheck:
       test: [ "CMD", "curl",
         "--fail",

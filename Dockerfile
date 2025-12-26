@@ -133,7 +133,7 @@ echo "Updated homebridge user: $(id homebridge)"
 
 # Ensure ownership and permissions on /homebridge directory
 
-chown -R homebridge:homebridge /homebridge
+chown -R homebridge:0 /homebridge
 chmod -R u+rwX,g+rwX /homebridge
 EOF
 
@@ -159,7 +159,7 @@ RUN touch /etc/s6-overlay/s6-rc.d/rclone-backups-init/up && chmod +x /etc/s6-ove
 #!/command/execlineb -P
 foreground { mkdir -p /homebridge/.cache/rclone }
 foreground { mkdir -p /homebridge/backups }
-foreground { chown --recursive -v homebridge:homebridge /homebridge/.cache/rclone /homebridge/backups }
+foreground { chown --recursive -v homebridge:0 /homebridge/.cache/rclone /homebridge/backups }
 EOF
 
 ### rclone-backups-run (longrun)
@@ -244,7 +244,7 @@ if [[ -n "${PUID:-}" ]] || [[ -n "${PGID:-}" ]]; then
     fi
   
     echo "Updating /homebridge ownership..."
-    chown --recursive -v homebridge:homebridge /homebridge
+    chown --recursive -v homebridge:0 /homebridge
 fi
 
 echo "homebridge user: $(id homebridge)"
