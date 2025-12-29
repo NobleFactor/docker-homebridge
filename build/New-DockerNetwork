@@ -29,23 +29,26 @@ fi
 source "$(dirname "$0")/Declare-BashScript" "$0" "help,device:,driver:,ip-range:" "hd" "$@"
 declare -r os=$(uname)
 
-if ! command -v ipcalc >/dev/null; then
-    error 1 "ipcalc is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
-fi
-
 case ${os} in
     Darwin)
         if ! sed --version >/dev/null 2>&1; then
-            error 1 "GNU sed is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
+            error $EX_UNAVAILABLE "GNU sed is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
         fi
         ;;
     Linux)
+        if [[ ! -f /etc/debian_version ]]; then
+            error $EX_CONFIG "A debian-based system is required to install the Azure CLI and $(hostname) is running $(uname --operating-system)."
+        fi
         if ! command -v nmcli >/dev/null; then
-            error 1 "nmcli is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
+            error $EX_UNAVAILABLE "nmcli is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
         fi
         ;;
-    *) error 2 "Unsupported operating system: $(uname)"
+    *) error $EX_CONFIG "Unsupported operating system: $(uname)"
 esac
+
+if ! command -v ipcalc >/dev/null; then
+    error $EX_UNAVAILABLE "ipcalc is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
+fi
 
 ###########
 # Variables
@@ -108,7 +111,7 @@ function get_linkname {
         ;;
     esac
 
-    error 1 "Unrecognized network driver: ${_network_driver}"
+    error $EX_SOFTWARE "Unrecognized network driver: ${_network_driver}"
 }
 
 ###########
@@ -141,14 +144,14 @@ while :; do
         break
         ;;
     *)
-        error 2 "Unrecognized option: $1"
+        error $EX_USAGE "Unrecognized option: $1"
         ;;
     esac
 done
 
 # <network-name>
 
-[[ -n ${1:-} ]] || error 1 "A docker network name is required."
+[[ -n ${1:-} ]] || error $EX_USAGE "A docker network name is required."
 declare -r network_name="$1"
 
 # --device
@@ -166,10 +169,10 @@ if [[ -z ${device_name:-} ]]; then
 else
     case $(uname) in
     Darwin)
-        ifconfig "${device_name}" > /dev/null 2>&1 || error 2 "Network device does not exist: ${device_name}"
+        ifconfig "${device_name}" > /dev/null 2>&1 || error $EX_USAGE "Network device does not exist: ${device_name}"
         ;;
     Linux)
-        [[ -d /sys/class/net/${device_name} ]] || error 2 "Network device does not exist: ${device_name}"
+        [[ -d /sys/class/net/${device_name} ]] || error $EX_USAGE "Network device does not exist: ${device_name}"
         ;;
     esac
 fi
@@ -194,7 +197,7 @@ else
         bridge | host | none) 
             ;;
         *)
-            error 2 "Unsupported network driver: ${driver_name}"
+            error $EX_USAGE "Unsupported network driver: ${driver_name}"
             ;;
         esac
         ;;
@@ -203,7 +206,7 @@ else
         ipvlan | macvlan | bridge | host | none)
             ;;
         *)
-            error 2 "Unsupported network driver: ${driver_name}"
+            error $EX_USAGE "Unsupported network driver: ${driver_name}"
             ;;
         esac
         ;;
@@ -217,12 +220,12 @@ declare -r driver_name
 if [[ -z ${ip_range:-} ]]; then
     case $driver_name in
     ipvlan | macvlan)
-        error 2 "The --ip-range option is required for '${driver_name}' driver."
+        error $EX_USAGE "The --ip-range option is required for '${driver_name}' driver."
         ;;
-    bridge | host | none) 
+    bridge | host | none)
         ;;
     *)
-        error 2 "Unsupported network driver: ${driver_name}"
+        error $EX_USAGE "Unsupported network driver: ${driver_name}"
         ;;
     esac
 else

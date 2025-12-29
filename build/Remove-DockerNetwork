@@ -34,10 +34,10 @@ while :; do
     esac
 done
 
-[[ -n ${1:-} ]] || error 2 "A network id or name is required."
+[[ -n ${1:-} ]] || error $EX_USAGE "A network id or name is required."
 
 if ! network_name=$(docker network inspect --format '{{.Name}}' "$1" 2>/dev/null); then
-    error 2 "Docker network does not exist: $1"
+    error $EX_USAGE "Docker network does not exist: $1"
 fi
 
 declare -r network_name
@@ -80,5 +80,5 @@ fi
 if docker network rm --force "${network_name}"; then
     success "Removed network: ${network_name}"
 else
-    error 1 "Failed to remove network: ${network_name}"
+    error $EX_SOFTWARE "Failed to remove network: ${network_name}"
 fi

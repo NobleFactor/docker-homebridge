@@ -27,7 +27,7 @@ while :; do
         shift 1
         break;;
     *)
-        error 1 "Unrecognized option: $1";;
+        error $EX_USAGE "Unrecognized option: $1";;
     esac
 done
 
@@ -45,7 +45,7 @@ Darwin)
     elif command -v brew >/dev/null; then
         HOMEBREW_NO_INTERACTIVE=1 brew update
     else
-        error 1 "A package manager is required to install prerequisites. Please install HomeBrew or MacPorts.
+        error $EX_UNAVAILABLE "A package manager is required to install prerequisites. Please install HomeBrew or MacPorts.
 Homebrew install instructions: https://brew.sh/
 MacPorts install instructions: https://www.macports.org/install.php
 "
@@ -93,7 +93,7 @@ MacPorts install instructions: https://www.macports.org/install.php
     elif command -v pip3 >/dev/null; then
         pip3 install --user --no-warn-script-location pre-commit
     else
-        error 1 "pip not found; skipping pre-commit installation. Install Python and pip to enable pre-commit checks."
+        error $EX_UNAVAILABLE "pip not found; skipping pre-commit installation. Install Python and pip to enable pre-commit checks."
     fi
 
     if [[ "$(uname)" == "Darwin" ]]; then
@@ -151,7 +151,7 @@ EOF
         fi
         pre-commit install
 else
-    error 1 "pre-commit not installed; skipping setup."
+    error $EX_UNAVAILABLE "pre-commit not installed; skipping setup."
 fi
 
 # Initialize and update the wiki submodule if not already present

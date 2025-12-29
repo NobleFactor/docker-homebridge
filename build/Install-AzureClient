@@ -6,6 +6,10 @@
 
 source "$(dirname "$0")/Declare-BashScript" "$0" "help,force" "hf" "$@"
 
+if [[ ! -f /etc/debian_version ]]; then
+    error $EX_CONFIG "A debian-based system is required to install the Azure CLI and $(hostname) is running $(uname --operating-system)."
+fi
+
 ###########
 # Arguments
 ###########
@@ -26,15 +30,11 @@ while :; do
         shift 1
         break;;
     *)
-        error 2 "Unknown argument: $1"
+        error $EX_USAGE "Unknown argument: $1"
         ;;
     esac
     shift
 done
-
-if [ ! -f /etc/debian_version ]; then
-    error 2 "A debian-based system is required to install the Azure CLI and $(hostname) is running $(uname --operating-system)."
-fi
 
 if ((!$force)) && command -v az &>/dev/null; then
     success "Azure CLI $(az --version | grep 'azure-cli' | awk '{print $2}') is already installed."
@@ -50,7 +50,7 @@ curl -sL https://aka.ms/InstallAzureCliDEB | sudo bash
 # Verify the installation
 
 if ! command -v az &>/dev/null; then
-    error 1 "Azure CLI installation failed. Please check the output for errors."
+    error $EX_SOFTWARE "Azure CLI installation failed. Please check the output for errors."
 fi
 
 success "Azure CLI $(az --version | grep 'azure-cli' | awk '{print $2}') installed."

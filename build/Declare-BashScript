@@ -182,6 +182,21 @@ function success {
 # Constants
 ###########
 
+# BSD sysexits.h exit codes (see /usr/include/sysexits.h)
+declare -r EX_USAGE=64       # command line usage error
+declare -r EX_DATAERR=65     # data format error
+declare -r EX_NOINPUT=66     # cannot open input
+declare -r EX_UNAVAILABLE=69 # service unavailable (missing dependency)
+declare -r EX_SOFTWARE=70    # internal software error
+declare -r EX_OSERR=71       # system error (e.g., can't fork)
+declare -r EX_OSFILE=72      # critical OS file missing
+declare -r EX_CANTCREAT=73   # can't create (user) output file
+declare -r EX_IOERR=74       # input/output error
+declare -r EX_TEMPFAIL=75    # temp failure; user is invited to retry
+declare -r EX_PROTOCOL=76    # remote error in protocol
+declare -r EX_NOPERM=77      # permission denied
+declare -r EX_CONFIG=78      # configuration error (unsupported platform)
+
 # useful for printing text to console...
 
 declare -r b="$(tput bold)"  # bold
@@ -199,5 +214,5 @@ declare -r Heavy_check_mark='✔'
 declare -r script_arguments=$(getopt -n "${script_name}" -o "$script_options" --long "$script_long_options" -- "$@")
 
 if (($? != 0)); then
-    error 1 "Unable to parse arguments: $arguments"
+    error $EX_USAGE "Unable to parse arguments: $arguments"
 fi

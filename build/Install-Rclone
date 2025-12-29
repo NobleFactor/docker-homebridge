@@ -47,7 +47,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
     if command -v apt-get; then
         sudo apt-get update && sudo apt-get --yes --no-install-recommends install "${missing[@]}"
     else
-        error 1 "Package manager not found"
+        error $EX_UNAVAILABLE "Package manager not found"
     fi
 fi
 
@@ -67,7 +67,7 @@ case $(uname -m) in
         declare -r platform=linux-386
         ;;
     *) 
-        error 1 "Unsupported architecture: $(uname -m)"
+        error $EX_CONFIG "Unsupported architecture: $(uname -m)"
         ;;
 esac
 

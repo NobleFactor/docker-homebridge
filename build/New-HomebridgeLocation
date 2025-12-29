@@ -31,7 +31,7 @@ set_env_from_file() {
     local env_file="$1"
 
     if [[ ! -f "$env_file" ]]; then
-        error 1 "Environment file not found: $env_file"
+        error $EX_NOINPUT "Environment file not found: $env_file"
     fi
 
     while IFS='=' read -r key value; do
@@ -68,7 +68,7 @@ while :; do
         --env-file)
             env_file="$2"
             if [[ ! -f "$env_file" ]]; then
-                error 1 "Environment file not found: $env_file"
+                error $EX_NOINPUT "Environment file not found: $env_file"
             fi
             set_env_from_file "$env_file"
             shift 2
@@ -114,7 +114,7 @@ while :; do
             break
             ;;
         *)
-            error 1 "Unrecognized option: $1"
+            error $EX_USAGE "Unrecognized option: $1"
             ;;
     esac
 done
@@ -123,15 +123,15 @@ done
 # Constants
 ###########
 
-[[ -n "${SERVER_ROLE:-}" ]] || error 1 "Missing value for server-role"
-[[ -n "${LOCATION:-}" ]] || error 1 "Missing value for location"
-[[ -n "${COUNTRY_CODE:-}" ]] || error 1 "Missing value for country-code"
-[[ -n "${STATE_OR_PROVINCE:-}" ]] || error 1 "Missing value for state-or-province"
-[[ -n "${CITY:-}" ]] || error 1 "Missing value for city"
-[[ -n "${ORGANIZATION_NAME:-}" ]] || error 1 "Missing value for organization-name"
-[[ -n "${ORGANIZATIONAL_UNIT:-}" ]] || error 1 "Missing value for organizational-unit"
-[[ -n "${DOMAIN_NAME:-}" ]] || error 1 "Missing value for domain-name"
-[[ -n "${EMAIL_ADDRESS:-}" ]] || error 1 "Missing value for email-address"
+[[ -n "${SERVER_ROLE:-}" ]] || error $EX_USAGE "Missing value for server-role"
+[[ -n "${LOCATION:-}" ]] || error $EX_USAGE "Missing value for location"
+[[ -n "${COUNTRY_CODE:-}" ]] || error $EX_USAGE "Missing value for country-code"
+[[ -n "${STATE_OR_PROVINCE:-}" ]] || error $EX_USAGE "Missing value for state-or-province"
+[[ -n "${CITY:-}" ]] || error $EX_USAGE "Missing value for city"
+[[ -n "${ORGANIZATION_NAME:-}" ]] || error $EX_USAGE "Missing value for organization-name"
+[[ -n "${ORGANIZATIONAL_UNIT:-}" ]] || error $EX_USAGE "Missing value for organizational-unit"
+[[ -n "${DOMAIN_NAME:-}" ]] || error $EX_USAGE "Missing value for domain-name"
+[[ -n "${EMAIL_ADDRESS:-}" ]] || error $EX_USAGE "Missing value for email-address"
 
 ###########
 # Main
