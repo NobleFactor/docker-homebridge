@@ -227,14 +227,14 @@ New-HomebridgeNetwork: ## Create Docker network for Homebridge
 	fi
 	build/New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" $(if $(IP_RANGE),--ip-range "$(IP_RANGE)") "$(network_name)"
 	echo "Network $(network_name) created"
-	
+
 Restart-Homebridge: $(certificate_request_conf) ## Restart container
 	$(docker_compose) restart
-	make Get-HomebridgeStatus
- 
+	$(MAKE) Get-HomebridgeStatus
+
 Start-Homebridge: $(certificate_request_conf) ## Start container
 	$(docker_compose) start
-	make Get-HomebridgeStatus
+	$(MAKE) Get-HomebridgeStatus
 
 Start-HomebridgeShell: ## Open interactive shell in the container
 	sudo docker exec --interactive --tty ${CONTAINER_HOSTNAME} /bin/bash
@@ -268,7 +268,7 @@ Update-HomebridgeRcloneConf: $(rclone_conf_file) ## Copy rclone.conf into contai
 
 ## INTERNAL TARGETS
 
-.ensure-network: ## Ensure Docker network exists (internal target)
+.ensure-network: # Ensure Docker network exists (internal target)
 	if ! sudo docker network inspect $(network_name) >/dev/null 2>&1; then
 		$(MAKE) New-HomebridgeNetwork
 	fi

@@ -13,9 +13,9 @@ Variables are supplied on the command line as \fBVAR=VALUE\fR assignments. Some 
 with sensible defaults; others are required for network creation.
 .SH VARIABLES
 .TP
-\fBIP_RANGE\fR (required)
+\fBIP_RANGE\fR
 CIDR for the Docker network (e.g., 192.168.1.8/29). Ensure it does not conflict with your DHCP pool.
-Required by \fBNew-HomebridgeContainer\fR and \fBNew-Homebridge\fR.
+Required on Linux for macvlan networks; optional on macOS for bridge networks.
 .TP
 \fBLOCATION\fR
 Location code (e.g., us-wa). Defaults to auto-detection via the Docker host geo-location.
@@ -39,6 +39,10 @@ Docker assigns an available address from \fBIP_RANGE\fR.
 \fBMAC_ADDRESS\fR
 MAC address for the container (e.g., 02:aa:bb:cc:dd:ee). Used during container creation. If omitted,
 Docker assigns a MAC address automatically.
+.TP
+\fBTAG\fR
+Image tag for the Homebridge container (default: 1.0.0-preview.3). Used to version the built image
+as \fBnoblefactor/homebridge:TAG\fR.
 .SH COMMANDS
 .TP
 \fBhelp\fR, \fBhelp-short\fR
@@ -60,6 +64,10 @@ creates/uses the macvlan/bridge network depending on host OS, and outputs inspec
 \fBNew-HomebridgeLocation\fR
 Ensure location-specific files (compose, cert config) exist and are up-to-date based on the env file.
 .TP
+\fBNew-HomebridgeNetwork\fR
+Create the Docker network for Homebridge. On Linux, creates a macvlan network (requires \fBIP_RANGE\fR).
+On macOS, creates a bridge network (\fBIP_RANGE\fR is optional).
+.TP
 \fBStart-Homebridge\fR / \fBStop-Homebridge\fR / \fBRestart-Homebridge\fR
 Start, stop, or restart the container via Docker Compose. Note: \fBIP_ADDRESS\fR is only used at creation time.
 .TP
@@ -67,7 +75,7 @@ Start, stop, or restart the container via Docker Compose. Note: \fBIP_ADDRESS\fR
 Display Docker Compose status (JSON) for the project.
 .TP
 \fBGet-HomebridgeHealth\fR
-Display the last health check log entry for the container.
+Display the container health state as JSON, including status, failing streak, and health check log.
 .TP
 \fBStart-HomebridgeShell\fR
 Open an interactive shell in the running container.
@@ -88,26 +96,26 @@ Copy the \fBrclone.conf\fR secret into the container's volume.
 Stop the container, remove the network, prune images/containers, and prune unused volumes. \fBDANGEROUS\fR.
 .SH FILES
 .TP
-\fIhomebridge-<location>.yaml\fR
-Compose file for a specific location (e.g., \fIhomebridge-us-wa.yaml\fR).
+\fIcompose.yaml\fR
+Docker Compose file for the Homebridge project.
 .TP
-\fIhomebridge.networks.yaml\fR
-Additional Compose networks configuration.
+\fIhomebridge.config/<location>/ssl/*\fR
+Certificate configuration and generated artifacts for a specific location.
 .TP
-\fIsecrets/certificates/<location>/*\fR
-Certificate configuration and generated artifacts.
+\fIhomebridge.config/<location>/certificate-request.env\fR
+Environment file for certificate generation.
+.TP
+\fIhomebridge.config/<location>/<environment>.network-config.mk\fR
+Optional per-instance network configuration containing \fBIP_ADDRESS\fR, \fBIP_RANGE\fR, and \fBMAC_ADDRESS\fR.
+Command-line assignments override these values. Docker assigns defaults for omitted values.
 .TP
 \fIvolumes/<location>/*\fR
 Container volumes including configs, backups, and persist directories.
-.TP
-\fIhomebridge.config/<location>/<container-hostname>.mk\fR
-Optional per-instance network configuration containing \fBIP_ADDRESS\fR, \fBIP_RANGE\fR, and \fBMAC_ADDRESS\fR.
-Command-line assignments override these values. Docker assigns defaults for omitted values.
 .SH NOTES
 - Network driver and device are auto-detected: macvlan on Linux, bridge on macOS.
 - Ensure \fBIP_RANGE\fR does not overlap with your DHCP pool.
 - \fBIP_ADDRESS\fR is validated to be inside \fBIP_RANGE\fR when provided.
-- Per-instance network config: create \fIhomebridge.config/<location>/<hostname>.mk\fR with simple \fBVAR=value\fR assignments
+- Per-instance network config: create \fIhomebridge.config/<location>/<environment>.network-config.mk\fR with simple \fBVAR=value\fR assignments
   (allowed: \fBIP_ADDRESS\fR, \fBIP_RANGE\fR, \fBMAC_ADDRESS\fR). Command-line overrides take precedence.
 .SH SEE ALSO
 .BR docker (1),
