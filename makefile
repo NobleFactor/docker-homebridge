@@ -124,7 +124,7 @@ docker_compose := sudo \
     NETWORK_NAME="$(network_name)" \
     docker compose -f "$(project_file)"
 
-.PHONY: help help-short help-full clean Get-HomebridgeHealth Get-HomebridgeStatus Mount-HomebridgeBackups New-Homebridge New-HomebridgeContainer New-HomebridgeImage New-HomebridgeLocation New-HomebridgeNetwork Restart-Homebridge Start-Homebridge Start-HomebridgeShell Stop-Homebridge New-HomebridgeCertificates Update-HomebridgeCertificates Update-HomebridgeRcloneConf .ensure-network
+.PHONY: help help-short help-full clean Get-HomebridgeHealth Get-HomebridgeStatus Mount-HomebridgeBackups New-Homebridge New-HomebridgeContainer New-HomebridgeImage New-LocationConfig New-HomebridgeNetwork Restart-Homebridge Start-Homebridge Start-HomebridgeShell Stop-Homebridge New-HomebridgeCertificates Update-HomebridgeCertificates Update-HomebridgeRcloneConf .ensure-network
 
 ##@ Help
 
@@ -209,7 +209,7 @@ New-HomebridgeImage: ## Build the Homebridge image only
 	echo -e "\n\033[1mWhat's next:\033[0m"
 	echo "    Create Homebridge container in $(LOCATION): make New-HomebridgeContainer [IP_ADDRESS=<IP_ADDRESS>]"
 
-New-HomebridgeLocation: ## Ensure location files exist; generate if missing or older than $(LOCATION)/ssl/certificate-request.env
+New-LocationConfig: ## Ensure location files exist; generate if missing or older than $(LOCATION)/ssl/certificate-request.env
 
 	if [[ ! -f "$(certificate_request_env)" ]]; then
 		echo "Missing environment file: $(certificate_request_env)"
@@ -217,7 +217,7 @@ New-HomebridgeLocation: ## Ensure location files exist; generate if missing or o
 	fi
 
 	if [[ ! -f "$(certificate_request_conf)" || "$(certificate_request_conf)" -ot "$(certificate_request_env)" ]]; then
-		build/New-HomebridgeLocation --env-file="$(certificate_request_env)" --location="$(LOCATION)"
+		build/New-LocationConfig --env-file="$(certificate_request_env)" --location="$(LOCATION)"
 	fi
 
 New-HomebridgeNetwork: ## Create Docker network for Homebridge
@@ -285,7 +285,7 @@ $(container_certificates): $(certificates)
 $(container_rclone_conf_file): $(rclone_conf_file)
 	$(MAKE) Update-HomebridgeRcloneConf
 
-## Location artifact rules: if missing or stale vs env/templates, (re)generate via New-HomebridgeLocation
+## Location artifact rules: if missing or stale vs env/templates, (re)generate via New-LocationConfig
 
 env_stamp := $(project_root)/.env-$(LOCATION).stamp
 
@@ -302,4 +302,4 @@ $(env_stamp): $(certificate_request_env)
 	touch "$@"
 
 $(certificate_request_conf): $(certreq_template) $(env_stamp)
-	$(MAKE) New-HomebridgeLocation
+	$(MAKE) New-LocationConfig

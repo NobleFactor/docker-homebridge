@@ -1,8 +1,8 @@
-#compdef New-HomebridgeLocation
+#compdef New-LocationConfig
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Noble Factor. All rights reserved.
 
-_New-HomebridgeLocation() {
+_New-LocationConfig() {
     local -a opts
     opts=(
         '(-h --help)'{-h,--help}'[Show usage information and exit]'
@@ -21,4 +21,4 @@ _New-HomebridgeLocation() {
     _arguments -s -S $opts
 }
 
-_New-HomebridgeLocation "$@"
+_New-LocationConfig "$@"

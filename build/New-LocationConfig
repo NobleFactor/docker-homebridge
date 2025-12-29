@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
+
+# New-LocationConfig - Generates deployment artifacts and certificate request configuration.
+
+source "$(dirname "$0")/Declare-BashScript" "$0" \
+    "help,server-role:,location:,country-code:,state-or-province:,city:,organization-name:,organizational-unit:,domain-name:,email-address:,env-file:" \
+    "hl:c:s:C:O:U:D:E:F:" \
+    "$@"
+
+###########
+# Arguments
+###########
+
+declare -r synopsis="${script_name} [--env-file <file>] [--server-role <role> --location <location>\
+ --country-code <cc> --state-or-province <state> --city <city> --organization-name <org>\
+ --organizational-unit <ou> --domain-name <domain> --email-address <email>] [-h|--help]"
+
+eval set -- "$script_arguments"
+
+while :; do
+    case $1 in
+    -h | --help)
+        usage "${synopsis}"
+        shift 1
+        ;;
+    --env-file)
+        env_file="$2"
+        if [[ ! -f "$env_file" ]]; then
+            error $EX_NOINPUT "Environment file not found: $env_file"
+        fi
+        Set-Environment --whitelist "SERVER_ROLE LOCATION COUNTRY_CODE STATE_OR_PROVINCE CITY ORGANIZATION_NAME ORGANIZATIONAL_UNIT DOMAIN_NAME EMAIL_ADDRESS" "$env_file"
+        shift 2
+        ;;
+    --server-role)
+        export SERVER_ROLE="$2"
+        shift 2
+        ;;
+    --location)
+        export LOCATION="$2"
+        shift 2
+        ;;
+    --country-code)
+        export COUNTRY_CODE="$2"
+        shift 2
+        ;;
+    --state-or-province)
+        export STATE_OR_PROVINCE="$2"
+        shift 2
+        ;;
+    --city)
+        export CITY="$2"
+        shift 2
+        ;;
+    --organization-name)
+        export ORGANIZATION_NAME="$2"
+        shift 2
+        ;;
+    --organizational-unit)
+        export ORGANIZATIONAL_UNIT="$2"
+        shift 2
+        ;;
+    --domain-name)
+        export DOMAIN_NAME="$2"
+        shift 2
+        ;;
+    --email-address)
+        export EMAIL_ADDRESS="$2"
+        shift 2
+        ;;
+    --)
+        shift 1
+        break
+        ;;
+    *)
+        error $EX_USAGE "Unrecognized option: $1"
+        ;;
+    esac
+done
+
+###########
+# Constants
+###########
+
+[[ -n "${SERVER_ROLE:-}" ]] || error $EX_USAGE "Missing value for server-role"
+[[ -n "${LOCATION:-}" ]] || error $EX_USAGE "Missing value for location"
+[[ -n "${COUNTRY_CODE:-}" ]] || error $EX_USAGE "Missing value for country-code"
+[[ -n "${STATE_OR_PROVINCE:-}" ]] || error $EX_USAGE "Missing value for state-or-province"
+[[ -n "${CITY:-}" ]] || error $EX_USAGE "Missing value for city"
+[[ -n "${ORGANIZATION_NAME:-}" ]] || error $EX_USAGE "Missing value for organization-name"
+[[ -n "${ORGANIZATIONAL_UNIT:-}" ]] || error $EX_USAGE "Missing value for organizational-unit"
+[[ -n "${DOMAIN_NAME:-}" ]] || error $EX_USAGE "Missing value for domain-name"
+[[ -n "${EMAIL_ADDRESS:-}" ]] || error $EX_USAGE "Missing value for email-address"
+
+###########
+# Main
+###########
+
+declare -r config_dir="${SERVER_ROLE}.config/${LOCATION}"
+declare -r certificate_request_env="${config_dir}/certificate-request.env"
+declare -r certificate_request_conf="${config_dir}/ssl/certificate-request.conf"
+
+mkdir -p "${config_dir}/ssl"
+
+envsubst <"${script_root}/templates/certificate-request.conf.template" >"${certificate_request_conf}"
+success "Generated: ${certificate_request_conf}"
+
+cat >"${certificate_request_env}" <<EOF
+SERVER_ROLE="${SERVER_ROLE}"
+LOCATION="${LOCATION}"
+COUNTRY_CODE="${COUNTRY_CODE}"
+STATE_OR_PROVINCE="${STATE_OR_PROVINCE}"
+CITY="${CITY}"
+ORGANIZATION_NAME="${ORGANIZATION_NAME}"
+ORGANIZATIONAL_UNIT="${ORGANIZATIONAL_UNIT}"
+DOMAIN_NAME="${DOMAIN_NAME}"
+EMAIL_ADDRESS="${EMAIL_ADDRESS}"
+EOF
+
+success "Saved: ${certificate_request_env}"
+
+chmod -R u=rwX,g=,o= "${config_dir}"

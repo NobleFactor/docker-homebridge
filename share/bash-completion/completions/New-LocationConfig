@@ -1,8 +1,8 @@
-# bash completion for New-HomebridgeLocation
+# bash completion for New-LocationConfig
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Noble Factor. All rights reserved.
 
-_New_HomebridgeLocation() {
+_New_LocationConfig() {
     local cur prev opts
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -44,4 +44,4 @@ _New_HomebridgeLocation() {
     return 0
 }
 
-complete -F _New_HomebridgeLocation New-HomebridgeLocation
+complete -F _New_LocationConfig New-LocationConfig

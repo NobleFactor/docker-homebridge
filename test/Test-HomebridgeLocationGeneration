@@ -76,8 +76,8 @@ rm --verbose -rf "${generated_certificates_dir}" "${generated_env_file}" "${gene
 
 # Generate artifacts
 
-note "Generating artifacts with build/New-HomebridgeLocation --env-file=test/homebridge-${test_location}.env"
-echo >&2 && build/New-HomebridgeLocation --env-file="test/homebridge-${test_location}.env"
+note "Generating artifacts with build/New-LocationConfig --env-file=test/homebridge-${test_location}.env"
+echo >&2 && build/New-LocationConfig --env-file="test/homebridge-${test_location}.env"
 make New-HomebridgeCertificates LOCATION="${test_location}"
 
 # Verify results

@@ -1,10 +1,10 @@
 .\" SPDX-FileCopyrightText: 2016-2025 Noble Factor
 .\" SPDX-License-Identifier: MIT
-.TH New-HomebridgeLocation 1 "December 2025" "docker-homebridge" "User Commands"
+.TH New-LocationConfig 1 "December 2025" "docker-homebridge" "User Commands"
 .SH NAME
-New-HomebridgeLocation \- Generate Homebridge artifacts and certificates for a location
+New-LocationConfig \- Generate deployment artifacts and certificates for a location
 .SH SYNOPSIS
-New-HomebridgeLocation [OPTIONS]
+New-LocationConfig [OPTIONS]
 .SH DESCRIPTION
 Generates location-specific artifacts for deployment, including:
 .IP \(bu 2
@@ -64,13 +64,13 @@ Environment variables file containing all the specified parameters for future re
 .SS Using an environment file:
 .RS
 .nf
-\fB./build/New-HomebridgeLocation --env-file=homebridge-us-wa.env\fR
+\fB./build/New-LocationConfig --env-file=homebridge-us-wa.env\fR
 .fi
 .RE
 .SS Using command-line options:
 .RS
 .nf
-\fB./build/New-HomebridgeLocation \\
+\fB./build/New-LocationConfig \\
   --server-role=homebridge \\
   --location=us-wa \\
   --country-code=US \\

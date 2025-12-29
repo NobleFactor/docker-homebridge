@@ -171,7 +171,7 @@ autoload -Uz compinit && compinit
 |--------|---------------------|
 | `New-DockerNetwork` | Driver types, network interface names |
 | `Remove-DockerNetwork` | Docker network names |
-| `New-HomebridgeLocation` | Env file paths, country codes, server roles |
+| `New-LocationConfig` | Env file paths, country codes, server roles |
 | `Test-HomebridgeLocationGeneration` | Auto-discovers test locations |
 | `Install-Dependencies` | Help option |
 | `Install-Docker` | Help option |

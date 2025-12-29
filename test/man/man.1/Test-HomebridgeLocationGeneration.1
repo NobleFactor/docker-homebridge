@@ -7,7 +7,7 @@ Test-HomebridgeLocationGeneration \- Automated test for Homebridge location-base
 .B Test-HomebridgeLocationGeneration
 [\fB--test-location\fR <location>] [\fB--help\fR]
 .SH DESCRIPTION
-Automated test suite that validates the New-HomebridgeLocation script by comparing generated artifacts against baseline reference files. The test performs the following validations:
+Automated test suite that validates the New-LocationConfig script by comparing generated artifacts against baseline reference files. The test performs the following validations:
 .IP \(bu 2
 Verifies existence of generated files (compose file, env file, certificates directory)
 .IP \(bu 2
@@ -24,7 +24,7 @@ Performs field-by-field comparison of public key certificate
 The test generates artifacts by calling:
 .RS
 .nf
-build/New-HomebridgeLocation --env-file=test/homebridge-<location>.env
+build/New-LocationConfig --env-file=test/homebridge-<location>.env
 make New-HomebridgeCertificates LOCATION=<location>
 .fi
 .RE
@@ -79,12 +79,12 @@ The script reports the number of passed tests vs total tests. If all tests pass,
 diff, openssl, awk, sed
 .TP
 .B Scripts:
-build/New-HomebridgeLocation, build/Declare-BashScript
+build/New-LocationConfig, build/Declare-BashScript
 .TP
 .B Make targets:
 New-HomebridgeCertificates
 .SH SEE ALSO
-.BR New-HomebridgeLocation (1),
+.BR New-LocationConfig (1),
 .BR openssl (1),
 .BR diff (1)
 .SH AUTHOR
