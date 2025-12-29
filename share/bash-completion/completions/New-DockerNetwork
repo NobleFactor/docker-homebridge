@@ -1,0 +1,43 @@
+# bash completion for New-DockerNetwork
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_New_DockerNetwork() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="-h --help -d --driver --device --ip-range"
+
+    case "${prev}" in
+        -d|--driver)
+            COMPREPLY=( $(compgen -W "bridge macvlan ipvlan host none" -- "${cur}") )
+            return 0
+            ;;
+        --device)
+            # Complete network interface names
+            local interfaces
+            if [[ "$(uname)" == "Darwin" ]]; then
+                interfaces=$(ifconfig -l 2>/dev/null)
+            else
+                interfaces=$(ls /sys/class/net 2>/dev/null)
+            fi
+            COMPREPLY=( $(compgen -W "${interfaces}" -- "${cur}") )
+            return 0
+            ;;
+        --ip-range)
+            # No specific completion for CIDR ranges
+            return 0
+            ;;
+    esac
+
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+
+    return 0
+}
+
+complete -F _New_DockerNetwork New-DockerNetwork

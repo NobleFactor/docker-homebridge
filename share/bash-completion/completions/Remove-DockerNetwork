@@ -1,0 +1,25 @@
+# bash completion for Remove-DockerNetwork
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_Remove_DockerNetwork() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="-h --help"
+
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+
+    # Complete docker network names
+    local networks
+    networks=$(docker network ls --format '{{.Name}}' 2>/dev/null)
+    COMPREPLY=( $(compgen -W "${networks}" -- "${cur}") )
+    return 0
+}
+
+complete -F _Remove_DockerNetwork Remove-DockerNetwork

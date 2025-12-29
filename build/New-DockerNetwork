@@ -22,19 +22,55 @@
 #    https://docs.docker.com/engine/daemon/ipv6/
 #
 
+if [[ "$EUID" -ne 0 ]]; then
+    exec sudo "$0" "$@"  # Re-execute with sudo, passing along all original arguments.
+fi
+
 source "$(dirname "$0")/Declare-BashScript" "$0" "help,device:,driver:,ip-range:" "hd" "$@"
+declare -r os=$(uname)
+
+if ! command -v ipcalc >/dev/null; then
+    error 1 "ipcalc is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
+fi
+
+case ${os} in
+    Darwin)
+        if ! sed --version >/dev/null 2>&1; then
+            error 1 "GNU sed is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
+        fi
+        ;;
+    Linux)
+        if ! command -v nmcli >/dev/null; then
+            error 1 "nmcli is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
+        fi
+        ;;
+    *) error 2 "Unsupported operating system: $(uname)"
+esac
+
+###########
+# Variables
+###########
+
+declare -r namespace="com.noblefactor" # prefix for docker network labels
 
 ###########
 # Functions
 ###########
 
-function get_linkname() {
+function cleanup_on_failure {
+    local exit_code=$?
+    if [[ ${exit_code} -ne 0 && -n ${network_id:-} ]]; then
+        "${script_root}/Remove-DockerNetwork" "${network_id}" 2>/dev/null || :
+    fi
+    exit ${exit_code}
+}
 
-    local network="$1"
-    local network_id=$(sudo docker network inspect "${network}" --format '{{.Id}}' | cut --characters=1-12)
-    local network_driver=$(sudo docker network inspect "${network}" --format '{{.Driver}}')
+function get_linkname {
 
-    case "${network_driver}" in
+    local _network_driver="$1"
+    local _network_id="$2"
+
+    case "${_network_driver}" in
     bridge)
         # When using the bridge network driver, Docker creates a virtual Ethernet bridge on the host machine. This
         # bridge acts as a virtual switch that connects all containers attached to the bridge network. Each container
@@ -45,7 +81,7 @@ function get_linkname() {
         # during network creation, Docker will not assign an IPv4 gateway address to the bridge interface. While
         # the IP link for the container itself is still created, the bridge itself won't have a default gateway IP,
         # requiring manual configuration if north-south traffic is desired.
-        echo "br-${network_id}"
+        echo "br-${_network_id:0:12}"
         return
         ;;
     ipvlan | macvlan)
@@ -69,23 +105,18 @@ function get_linkname() {
         return
         ;;
     overlay)
-        error 1 "Unsupported network driver: ${network_driver}"
-        ;;
-    *)
-        error 1 "Unrecognized network driver: ${network_driver}"
         ;;
     esac
 
+    error 1 "Unrecognized network driver: ${_network_driver}"
 }
 
 ###########
 # Arguments
 ###########
 
-declare -r synopsis="New-DockerNetwork [--device <name>] [--driver <bridge|ipvlan|macvlan>] [--ip-range <CIDR>] [--help] <service-name>"
+declare -r synopsis="New-DockerNetwork --help | [--device <name>] [--driver <bridge|ipvlan|macvlan>] [--ip-range <CIDR>] <network-name>"
 eval set -- "$script_arguments"
-
-[[ $* != -- ]] || usage "$synopsis"
 
 while :; do
     case $1 in
@@ -94,15 +125,15 @@ while :; do
         shift 1
         ;;
     --device)
-        declare -r device_name="$2"
+        device_name="$2"
         shift 2
         ;;
     -d | --driver)
-        declare -r driver_name="$2"
+        driver_name="$2"
         shift 2
         ;;
     --ip-range)
-        declare -r ip_range="$2"
+        ip_range="$2"
         shift 2
         ;;
     --)
@@ -110,86 +141,129 @@ while :; do
         break
         ;;
     *)
-        error 1 "Unrecognized option: $1"
+        error 2 "Unrecognized option: $1"
         ;;
     esac
 done
 
+# <network-name>
+
+[[ -n ${1:-} ]] || error 1 "A docker network name is required."
+declare -r network_name="$1"
+
+# --device
+
 if [[ -z ${device_name:-} ]]; then
-    case $OSTYPE in
-    darwin*)
+    case $(uname) in
+    Darwin)
         declare -r default_device_name=$(scutil --dns | awk '/if_index/ { print gensub(/[()]/, "", "g", $4); exit }')
         ;;
-    linux-gnu*)
+    Linux)
         declare -r default_device_name=$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}')
         ;;
-    *)
-        error 1 "Unsupported operating system: $OSTYPE"
+    esac
+    device_name="${default_device_name}"
+else
+    case $(uname) in
+    Darwin)
+        ifconfig "${device_name}" > /dev/null 2>&1 || error 2 "Network device does not exist: ${device_name}"
+        ;;
+    Linux)
+        [[ -d /sys/class/net/${device_name} ]] || error 2 "Network device does not exist: ${device_name}"
         ;;
     esac
-    declare -r device_name="${default_device_name}"
 fi
 
+declare -r device_name
+
+# --driver
+
 if [[ -z ${driver_name:-} ]]; then
-    case $OSTYPE in
-    darwin*)
+    case $(uname) in
+    Darwin)
         declare -r driver_name=bridge
         ;;
-    linux-gnu*)
+    Linux)
         declare -r driver_name=macvlan
         ;;
     esac
+else
+    case $(uname) in
+    Darwin)
+        case $driver_name in
+        bridge | host | none) 
+            ;;
+        *)
+            error 2 "Unsupported network driver: ${driver_name}"
+            ;;
+        esac
+        ;;
+    Linux)
+        case $driver_name in
+        ipvlan | macvlan | bridge | host | none)
+            ;;
+        *)
+            error 2 "Unsupported network driver: ${driver_name}"
+            ;;
+        esac
+        ;;
+    esac
 fi
+
+declare -r driver_name
+
+# --ip-range
 
 if [[ -z ${ip_range:-} ]]; then
     case $driver_name in
     ipvlan | macvlan)
-        error 1 "The --ip-range option is required for the '${driver_name}' driver."
+        error 2 "The --ip-range option is required for '${driver_name}' driver."
         ;;
-    bridge | host | none) ;;
+    bridge | host | none) 
+        ;;
     *)
-        error 1 "Unsupported network driver: ${driver_name}"
+        error 2 "Unsupported network driver: ${driver_name}"
         ;;
     esac
 else
-    case $driver_name in
+    case ${driver_name} in
     ipvlan | macvlan)
-        declare -r address_pool="$(ipcalc "${ip_range}" | awk '/^HostMin: / { print $2; exit }')/$(ipcalc "${ip_range}" | awk '/^Netmask: / { print $4; exit }')"
-        declare -r host_address="$(ipcalc "${ip_range}" | awk '/^HostMax: / { print $2; exit }')"
+        declare -r shim_link="${network_name:0:10}_shim"
+        declare -r udev_rules="/etc/udev/rules.d/99-${shim_link}.rules"
+        declare -r netmask="$(ipcalc "${ip_range}" | awk '/^Netmask: / { print $4; exit }')"
+        declare -r host_address="$(ipcalc "${ip_range}" | awk '/^HostMax: / { print $2; exit }')/${netmask}"
+        declare -r container_address_pool="$(ipcalc "${ip_range}" | awk '/^HostMin: / { print $2; exit }')/${netmask}"
         ;;
     bridge | host | none)
-        note "The --ip-range option is not applicable for the '${driver_name}' driver. Ignoring."
-        ;;
-    *)
-        error 1 "Unsupported network driver: ${driver_name}"
+        note "The --ip-range option is not applicable to '${driver_name}' driver. Ignoring."
         ;;
     esac
 fi
 
-[[ -n ${1:-} ]] || error 1 "A docker service name is required."
-declare -r service_name="$1"
+declare -r ip_range
 
 ###########
 # Main
 ###########
 
-declare -r network_name="${service_name:0:$((15 - (${#device_name} > 15 ? 15 : ${#device_name})))}_${device_name:0:15}"
+case $os in
+Darwin)
 
-case $OSTYPE in
-darwin*)
-    declare -r ipv4_subnet=$(ipcalc $(ifconfig -f inet:cidr,inet6:cidr "${device_name}" | awk '/inet / {print $2}') | awk '/Network:/ {print $2}')
+    declare -r ifconfig=$(ifconfig -f inet:cidr,inet6:cidr "${device_name}")
+    declare -r ipv4_subnet=$(ipcalc $(echo "${ifconfig}" | awk '/inet / {print $2}') | awk '/Network:/ {print $2}')
     declare -r ipv4_gateway=$(netstat -rn | awk '/^default[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[[:space:]]+\w+[[:space:]]+'"$device_name"'/ { print $2 }')
+
+    declare -r ipv6_subnet=$(ipcalc $(echo "${ifconfig}" | awk '/inet6 / { if ($2 !~ /^(fe80|::1)/) { print $2; exit } }') | awk '/^Prefix: / { print $2 }')
     ;;
-linux-gnu*)
+
+Linux)
 
     declare -r ipv4_address="$(nmcli --escape no --get-values IP4.ADDRESS device show "${device_name}" | head -n 1)"
 
-    if [[ -z "${ipv4_address}" ]]; then
-        error 1 "No IPv4 address found for device: ${device_name}"
+    if [[ -n "${ipv4_address}" ]]; then
+        declare -r ipv4_subnet="$(ipcalc "${ipv4_address:-}" | awk '/^Network:/ {print $2}')"
+        declare -r ipv4_gateway="$(nmcli --escape no --get-values IP4.GATEWAY device show "${device_name}")"
     fi
-
-    declare -r ipv4_subnet="$(ipcalc "${ipv4_address:-}" | awk '/^Network:/ {print $2}')"
-    declare -r ipv4_gateway=$(nmcli --escape no --get-values IP4.GATEWAY device show "${device_name}")
 
     declare -r ipv6_subnet=$(nmcli --escape no --get-values IP6.ROUTE device show "${device_name}" | awk '
         BEGIN { 
@@ -204,48 +278,85 @@ linux-gnu*)
             } 
         }')
     ;;
-*)
-    error 1 "Unsupported operating system: $OSTYPE"
-    ;;
+
 esac
 
-# Clean up any existing network with the same name
+# 1. Create the docker network
 
-sudo docker network rm --force "${network_name}" >/dev/null
-sudo ip link del "${service_name:0:10}_shim" 2>/dev/null || true
+args=(--driver "${driver_name}")
 
-# Create the docker network
+[[ -n ${ipv4_subnet:-} ]] && args+=(--ipv4 --subnet="${ipv4_subnet}" --gateway="${ipv4_gateway}")
+[[ -n ${ipv6_subnet:-} ]] && args+=(--ipv6)
+[[ -n ${container_address_pool:-} ]] && args+=(--ip-range="${container_address_pool}")
+[[ -n ${host_address:-} ]] && args+=(--opt="parent=${device_name}" --aux-address="hostshim=${host_address}")
+[[ -n ${shim_link:-} ]] && args+=(--label="${namespace}.shim-link=${shim_link}")
+[[ -n ${udev_rules:-} ]] && args+=(--label="${namespace}.udev-rules=${udev_rules}")
 
-sudo docker network create --driver "${driver_name}" --ipv4 --subnet="${ipv4_subnet}" --gateway="${ipv4_gateway}" \
-    $([[ -n ${address_pool:-} ]] && echo --ip-range "${address_pool}") \
-    $([[ "${driver_name}" == macvlan || "${driver_name}" == ipvlan ]] && echo --opt parent="${device_name}") \
-    $([[ -n ${host_address:-} ]] && echo --aux-address hostshim="${host_address}") \
-    $([[ $OSTYPE == linux-gnu* && -n ${ipv6_subnet:-} ]] && echo --ipv6) \
-    "${network_name}" >/dev/null
+args+=("${network_name}")
 
-declare -r link_name="$(get_linkname "${network_name}")"
+declare -r network_id=$(docker network create "${args[@]}")
 
-note "Created docker ${driver_name} network ${network_name} on parent device ${device_name}$([[ -z ${link_name} ]] || echo " with ip link name ${link_name}")"
-sudo docker network inspect "${network_name}" 1>&2
+if [[ -n ${shim_link:-} ]]; then
 
-if [[ "$OSTYPE" == linux-gnu* && -n ${link_name:-} ]]; then
-    ip -s link show "${link_name}" # Links show up on Linux, but not on macOS
+    trap cleanup_on_failure EXIT
+
+    # 2. Create udev rules to hide the shim_link from all but the host.
+    # Udev rules are triggered whenever the shim_link interface is added to the system (e.g., at boot or time of creation).
+
+    cat > "${udev_rules}" <<EOF
+# Ensure that the shim link for Docker network ${network_name} does not respond to ARP requests on other interfaces
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="${shim_link}", RUN+="/sbin/sysctl -w net.ipv4.conf.${shim_link}.arp_ignore=1"
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="${shim_link}", RUN+="/sbin/sysctl -w net.ipv4.conf.${shim_link}.arp_announce=2"
+# Ensure IPv6 is disabled and autoconfiguration is turned off on the shim link for Docker network ${network_name}
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="${shim_link}", RUN+="/sbin/sysctl -w net.ipv6.conf.${shim_link}.accept_ra=0"
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="${shim_link}", RUN+="/sbin/sysctl -w net.ipv6.conf.${shim_link}.autoconf=0"
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="${shim_link}", RUN+="/sbin/sysctl -w net.ipv6.conf.${shim_link}.disable_ipv6=1"
+EOF
+
+    udevadm control --reload-rules
+
+    # 3. Create shim link that gives the host an interface for accessing containers on network_name.
+    # The shim link is a macvlan link in bridge mode attached to the parent device. It's not created automatically by
+    # docker. Without it the kernel prohibits communication between the host and containers on network_name.
+    
+    ip link add "${shim_link}" link "${device_name}" type macvlan mode bridge # device_name is the parent
+    ip addr add "${host_address}" dev "${shim_link}"
+    ip link set "${shim_link}" up
+    ip route add "${ip_range}" dev "${shim_link}"  # enables communication with any container on network_name
+
+    # 4. Configure Avahi to ignore shim_link to prevent mDNS conflicts between host and containers on network_name
+
+    declare -r avahi_daemon_conf="/etc/avahi/avahi-daemon.conf"
+
+    if [[ -f "${avahi_daemon_conf}" ]]; then
+
+        if grep -qE '^[[:space:]]*#?[[:space:]]*deny-interfaces=' "$avahi_daemon_conf"; then
+            # Normalize and append shim_link if missing
+            sed -i -E "
+                s/^[[:space:]]*#[[:space:]]*deny-interfaces=/deny-interfaces=/;
+                s/deny-interfaces=[[:space:]]*/deny-interfaces=/;
+                /(^|,)${shim_link}(,|$)/! s/$/,${shim_link}/
+            " "$avahi_daemon_conf"
+        else
+            # Insert into [server] section
+            sed -i -E "/^\[server\]/a deny-interfaces=${shim_link}" "$avahi_daemon_conf"
+        fi
+
+        systemctl restart avahi-daemon
+    fi
+
+    trap - EXIT
+
+    note $"Created shim link ${shim_link} for host access to containers on ${network_name}:\n$(ip -s link show "${shim_link}")"
+
 fi
 
-if [[ "$OSTYPE" == linux-gnu* && -n ${ip_range:-} ]]; then
+note "Created docker ${driver_name} network ${network_name} with id ${network_id} on parent device ${device_name}$(
+    if [[ -n ${shim_link:-} ]]; then
+        echo " with shim link ${shim_link} and udev rules in ${udev_rules}"
+    elif [[ ${driver_name} == bridge ]]; then
+        echo " with link br-${network_id:0:12}"
+    fi
+)"
 
-    # Create a shim link to assign an address to the host so that it can access containers on the new network
-
-    declare -r shim_link_name="${service_name:0:10}_shim"
-    declare -r subnet_prefix="${ip_range#*/}"
-
-    sudo ip link add "${shim_link_name}" link "${device_name}" type macvlan mode bridge
-    sudo ip addr add "${host_address}/${subnet_prefix}" dev "${shim_link_name}"
-    sudo ip link set "${shim_link_name}" up
-
-    note $"Created shim link ${shim_link_name} for host access to containers on ${network_name}:\n$(ip -s link show "${shim_link_name}")"
-
-fi
-
-echo "${network_name}"
-note "Done."
+echo "${network_id}"

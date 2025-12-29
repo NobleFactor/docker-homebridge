@@ -1,0 +1,14 @@
+#compdef Install-Rclone
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_Install-Rclone() {
+    local -a opts
+    opts=(
+        '(-h --help)'{-h,--help}'[Show usage information and exit]'
+    )
+
+    _arguments -s -S $opts
+}
+
+_Install-Rclone "$@"

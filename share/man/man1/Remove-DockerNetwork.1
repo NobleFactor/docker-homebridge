@@ -1,0 +1,95 @@
+.\" SPDX-FileCopyrightText: 2016-2025 Noble Factor
+.\" SPDX-License-Identifier: MIT
+.TH Remove-DockerNetwork 1 "December 2025" "Noble Factor" "User Commands"
+.SH NAME
+Remove-DockerNetwork \- remove a Docker network and associated artifacts created by New-DockerNetwork
+.SH SYNOPSIS
+.B Remove-DockerNetwork
+\fI[--help]\fR <network-name-or-id>
+.SH DESCRIPTION
+Remove a Docker network and all associated artifacts created by \fBNew-DockerNetwork\fR.
+This includes the shim link, udev rules, and Avahi configuration changes made during
+network creation.
+.PP
+The command accepts either a network name or network ID. If an ID is provided, it is
+resolved to the network name for consistent output messaging.
+.PP
+The script performs cleanup in the following order:
+.IP 1. 4
+Stops all containers currently attached to the network.
+.IP 2. 4
+Removes the shim link from Avahi's \fIdeny-interfaces\fR in \fB/etc/avahi/avahi-daemon.conf\fR
+and restarts the Avahi daemon.
+.IP 3. 4
+Deletes the udev rules file (e.g., \fB/etc/udev/rules.d/99-<shim>.rules\fR) and reloads
+udev rules.
+.IP 4. 4
+Deletes the shim link interface using \fBip link del\fR.
+.IP 5. 4
+Removes the Docker network using \fBdocker network rm\fR.
+.PP
+The shim link name and udev rules file path are retrieved from Docker network labels
+(\fBcom.noblefactor.shim-link\fR and \fBcom.noblefactor.udev-rules\fR) that were set
+during network creation.
+.SH OPTIONS
+.TP
+.B -h, --help
+Show short usage information.
+.SH PRIVILEGES AND DEPENDENCIES
+The script requires elevated privileges (calls are run via \fBsudo\fR). It assumes the
+presence of:
+
+.IP \(bu 2
+\fBdocker\fR
+.IP \(bu 2
+\fBip\fR (iproute2)
+.IP \(bu 2
+\fBsed\fR (GNU sed on Linux)
+.IP \(bu 2
+\fBsystemctl\fR (for restarting Avahi)
+.IP \(bu 2
+\fBudevadm\fR (for reloading udev rules)
+.IP \(bu 2
+\fBxargs\fR (for stopping containers)
+
+.SH FILES
+.TP
+/etc/avahi/avahi-daemon.conf
+Avahi daemon configuration; shim link is removed from \fIdeny-interfaces\fR.
+.TP
+/etc/udev/rules.d/99-<shim>.rules
+Udev rules file created by \fBNew-DockerNetwork\fR; deleted during removal.
+.SH EXAMPLES
+.TP
+Remove a network by name:
+.RS
+.nf
+  sudo Remove-DockerNetwork homebridge_eth0
+.fi
+.RE
+
+.TP
+Remove a network by ID (from New-DockerNetwork output):
+.RS
+.nf
+  sudo Remove-DockerNetwork 8f3a9b2c1d4e5f6a7b8c9d0e1f2a3b4c
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+0
+Success
+.TP
+1
+Error during network removal
+.TP
+2
+Invalid arguments or network does not exist
+.SH SEE ALSO
+.BR New-DockerNetwork (1),
+.BR docker-network-rm (1),
+.BR docker (1),
+.BR ip (8),
+.BR avahi-daemon (8)
+.SH AUTHOR
+Noble Factor

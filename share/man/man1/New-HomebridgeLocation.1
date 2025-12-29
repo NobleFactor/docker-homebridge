@@ -6,13 +6,11 @@ New-HomebridgeLocation \- Generate Homebridge artifacts and certificates for a l
 .SH SYNOPSIS
 New-HomebridgeLocation [OPTIONS]
 .SH DESCRIPTION
-Generates location-specific artifacts for Homebridge deployment, including:
+Generates location-specific artifacts for deployment, including:
 .IP \(bu 2
-Certificate request configuration (secrets/certificates/LOCATION/certificate-request.conf)
+Certificate request configuration (<SERVER_ROLE>.config/<LOCATION>/ssl/certificate-request.conf)
 .IP \(bu 2
-Docker Compose file (homebridge-LOCATION.yaml)
-.IP \(bu 2
-Environment variables file (homebridge-LOCATION.env)
+Certificate request environment file (<SERVER_ROLE>.config/<LOCATION>/certificate-request.env)
 .PP
 The script supports two modes of operation:
 .IP 1. 3
@@ -23,8 +21,11 @@ Specify individual parameters via command-line options
 All parameters are required and must be provided through one of these methods.
 .SH OPTIONS
 .TP
-.B --env-file <file>
-Load all environment variables from the specified file. The file should contain KEY=VALUE pairs for: LOCATION, COUNTRY_CODE, STATE_OR_PROVINCE, CITY, ORGANIZATION_NAME, ORGANIZATIONAL_UNIT, DOMAIN_NAME, EMAIL_ADDRESS.
+.B -F, --env-file <file>
+Load all environment variables from the specified file. The file should contain KEY=VALUE pairs for: SERVER_ROLE, LOCATION, COUNTRY_CODE, STATE_OR_PROVINCE, CITY, ORGANIZATION_NAME, ORGANIZATIONAL_UNIT, DOMAIN_NAME, EMAIL_ADDRESS.
+.TP
+.B --server-role <role>
+Server role name (e.g., homebridge). Used to determine the config directory path.
 .TP
 .B -l, --location <location>
 Set the location name (e.g., us-wa). Used in file names and certificate generation.
@@ -54,13 +55,10 @@ Email address for certificate requests.
 Show usage information and exit.
 .SH GENERATED FILES
 .TP
-.I secrets/certificates/LOCATION/certificate-request.conf
+.I <SERVER_ROLE>.config/<LOCATION>/ssl/certificate-request.conf
 OpenSSL certificate request configuration file generated from the template.
 .TP
-.I homebridge-LOCATION.yaml
-Docker Compose file for the Homebridge service at this location.
-.TP
-.I homebridge-LOCATION.env
+.I <SERVER_ROLE>.config/<LOCATION>/certificate-request.env
 Environment variables file containing all the specified parameters for future reference.
 .SH USAGE
 .SS Using an environment file:
@@ -73,6 +71,7 @@ Environment variables file containing all the specified parameters for future re
 .RS
 .nf
 \fB./build/New-HomebridgeLocation \\
+  --server-role=homebridge \\
   --location=us-wa \\
   --country-code=US \\
   --state-or-province=Washington \\

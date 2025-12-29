@@ -4,112 +4,131 @@
 .SH NAME
 New-DockerNetwork \- create a Docker network using Noble Factor conventions
 .SH SYNOPSIS
-New-DockerNetwork [OPTIONS] SERVICE-NAME
-[\fB\-h\fR|\fB\-\-help\fR]
-[\fB\-\-device\fR=\fIDEVICE-NAME\fR]
-[\fB\-d\fR|\fB\-\-driver\fR=\fIDRIVER-NAME\fR]
-[\fB\-\-ip-range\fR=\fIIP-RANGE\fR]
-\fISERVICE-NAME\fR
+.B New-DockerNetwork
+\fI[--device <name>] [--driver <bridge|ipvlan|macvlan>] [--ip-range <CIDR>] [--help]\fR <network-name>
 .SH DESCRIPTION
-Create a Docker network using Noble Factor conventions. The network is named as 
-\fISERVICE-NAME\fB:\fIDEVICE-NAME\fR. If you do not specify a device name, the 
-default device name is used. On Linux, the default is obtained from the operating 
-system using \fBip route show default\fR. On macOS, the default is obtained from the 
-operating system using \fBscutil --dns\fR.
+Create a Docker network following Noble Factor conventions.
+The command discovers host networking information, chooses sensible defaults per operating system, and
+creates a user-defined Docker network. On Linux, when an IP range is provided for \fImacvlan\fR or \fIipvlan\fR,
+the command also creates a host "shim" link (macvlan in bridge mode) so the host can reach containers on the
+new network.
 .PP
-Note that IPv6 and macvlan networks can only be created on Linux hosts.
-.SH ARGUMENTS
+This manual documents the behaviour implemented by the script installed at
+\fBbuild/New-DockerNetwork\fR.
+.SS Discovery and defaults
+On macOS the script discovers the device IPv4 via \fBifconfig\fR and system DNS data. On Linux it prefers NetworkManager
+queries (\fBnmcli\fR) and the system default route. If no device is provided the script sets a default per-OS.
+
+.SS Driver-specific rules
+.PP
+- \fIbridge\fR: Creates a bridge user network using the discovered IPv4 subnet and gateway.
+- \fImacvlan\fR / \fIipvlan\fR: Require \fI--ip-range\fR; the script parses the range using \fIipcalc\fR to derive an
+  IPv4 host address to reserve for the host shim and a container address pool. The parent device is specified via
+  the \fB--opt parent=...\fR option to \fBdocker network create\fR.
+
+.SS IPv6 handling (Linux)
+On Linux the script detects an IPv6 route prefix and, if present, passes \fB--ipv6\fR to \fBdocker network create\fR.
+When an explicit IPv6 subnet is not supplied, Docker will allocate an IPv6 ULA (Unique Local Address) prefix for the
+network and containers will be assigned IPv6 addresses at container creation time. The script also writes udev rules
+and sysctl commands to harden the created shim interface against IPv6 autoconfiguration and unwanted ND behaviour
+so the host does not inadvertently acquire or advertise IPv6 addresses on the shim.
+.PP
+Note: IPv6 handling in the script is implemented for Linux only; macOS does not currently support Docker-managed
+IPv6 networks and therefore is not configured for IPv6 by this script.
+.SH OPTIONS
 .TP
-.B SERVICE-NAME
-A docker service name.
+.B --device <name>
+Parent network device to use when creating macvlan/ipvlan networks. If omitted a sensible default is selected
+depending on the operating system (macOS: derived from system DNS info; Linux: default route device).
+.TP
+.B -d, --driver <bridge|ipvlan|macvlan>
+Network driver to create. Default: \fIbridge\fR on macOS, \fImacvlan\fR on Linux. The script supports \fIbridge\fR,
+\fImacvlan\fR and \fIipvlan\fR. \fIhost\fR and \fInone\fR are recognised but result in minimal/no changes.
+.TP
+.B --ip-range <CIDR>
+IPv4 CIDR that constrains addresses for container assignment. Required for \fImacvlan\fR and \fIipvlan\fR drivers; not
+applicable (ignored) for \fIbridge\fR, \fIhost\fR or \fInone\fR. The script uses \fIipcalc\fR to parse IPv4 ranges.
 .TP
 .B -h, --help
-Print this text and exit.
+Show short usage information.
+.SH SHIM LINK (Linux only)
+When an \fI--ip-range\fR is provided and the platform is Linux, the script creates a host shim link named
+"\fI<network-name>_shim\fR" (first 10 characters of network name plus \fB_shim\fR suffix) as a macvlan device in bridge mode attached to the parent device. The shim:
+
+.IP
+.TP 0.5i
+- receives a reserved IPv4 address from the parsed range via \fBip addr add\fR
+.TP 0.5i
+- is set up and brought up with \fBip link set ... up\fR
+.TP 0.5i
+- has a route added for the new IPv4 range via \fBip route add\fR so the host can reach containers
+.EI
+
+To reduce multicast/ARP/ND conflicts the script:
+
+.IP
+.TP 0.5i
+- updates \fB/etc/avahi/avahi-daemon.conf\fR to add the shim to \fIdeny-interfaces\fR so avahi-daemon ignores mDNS on the shim
+.TP 0.5i
+- sets IPv4 sysctls on the shim: \fBnet.ipv4.conf.<shim>.arp_ignore=1\fR and \fBnet.ipv4.conf.<shim>.arp_announce=2\fR
+.TP 0.5i
+- writes IPv6-related sysctls to disable RA/autoconf/IPv6 on the shim and persists them via a udev rules file
+  under \fB/etc/udev/rules.d/99-<shim>.rules\fR (for example: \fBnet.ipv6.conf.<shim>.accept_ra=0\fR,
+  \fBnet.ipv6.conf.<shim>.autoconf=0\fR, \fBnet.ipv6.conf.<shim>.disable_ipv6=1\fR)
+.EI
+
+.SH PRIVILEGES AND DEPENDENCIES
+The script requires elevated privileges (calls are run via \fBsudo\fR). It also assumes the presence of these utilities:
+
+.IP
+.TP 0.5i
+- \fBdocker\fR
+- \fBip\fR (iproute2)
+- \fBipcalc\fR (IPv4 parsing)
+- \fBnmcli\fR (NetworkManager queries on Linux)
+- \fBifconfig\fR / \fBscutil\fR (macOS discovery)
+- \fBsed\fR (GNU sed required on macOS)
+.EI
+
+If these tools are absent the script will fail; the script reports errors through an \fBerror\fR helper defined in its
+bootstrap (\fBDeclare-BashScript\fR).
+.SH FILES
 .TP
-.B -d, --device DEVICE-NAME
-Parent network device name. Default: On Linux, the primary network interface as reported by 'ip route show default'. On macOS, the primary network interface as returned by 'scutil --dns'.
-.TP
-.B -D, --driver DRIVER-NAME
-Driver type. Default: macvlan.
-.TP
-.B --ip-range IP-RANGE
-Allocate container IPv4 addresses from a CIDR block. Example: 192.168.8/29 allocates a block of 5 IP addresses in the range [9,14]. 'ipcalc' is a convenient tool for computing CIDR block values. By default, docker allocates container addresses from the entire IPv4 subnet. Ensure that the CIDR block you specify is unused by, for example, your local DHCP server.
-.SH BEHAVIOR
-The script automatically:
-.IP \(bu 2
-Detects the operating system (Darwin/macOS or GNU/Linux)
-.IP \(bu 2
-Determines the default network interface if not specified
-.IP \(bu 2
-Calculates IPv4 subnet and gateway information
-.IP \(bu 2
-On GNU/Linux: Also configures IPv6 networking
-.IP \(bu 2
-Removes any existing network with the same name
-.IP \(bu 2
-Creates the new network with appropriate settings
-.IP \(bu 2
-Displays the network configuration upon completion
+/etc/avahi/avahi-daemon.conf
+.br
+/etc/udev/rules.d/99-<shim>.rules
 .SH EXAMPLES
 .TP
-Create a network for a web service using default settings:
-.B New-DockerNetwork web-service
-.TP
-Create a network using a specific device on Linux:
-.B New-DockerNetwork --device=wlan0 api-service
-.TP
-Create a network with bridge driver:
-.B New-DockerNetwork --driver=bridge --device=eth1 database
-.SH PLATFORM DIFFERENCES
-.TP
-.B macOS (Darwin)
-\(bu Uses "scutil --dns" to determine default interface
-.br
-\(bu IPv4-only network configuration
-.br
-\(bu Uses ipcalc and ifconfig for network calculations
-.TP
-.B GNU/Linux
-\(bu Uses \fBip route show default\fR to determine default interface
-.br
-\(bu Supports both IPv4 and IPv6 networking
-.br
-\(bu Uses nmcli for network information gathering
+Create a macvlan network on Linux named \fBhomebridge_eth0\fR using device \fBeth0\fR:
+.RS
+.nf
+  sudo New-DockerNetwork --device eth0 --driver macvlan --ip-range 192.168.50.0/24 homebridge_eth0
+.fi
+.RE
+
+Create a bridge network on macOS named \fBhomebridge_en0\fR (device autodetected):
+.RS
+.nf
+  New-DockerNetwork --driver bridge homebridge_en0
+.fi
+.RE
+.SH OUTPUT
+On success, the script prints the Docker network ID to stdout. This can be captured for use by other scripts
+or for cleanup via \fBRemove-DockerNetwork\fR.
+.SH DIAGNOSTICS
+The script prints diagnostic output via \fBdocker network inspect\fR and shows link state on Linux (\fBip -s link show\fR)
+when networks or shim links are created.
 .SH EXIT STATUS
 .TP
 0
-.I \fBdocker\fR, \fBsudo\fR, \fBgetopt\fR, \fBuname\fR
 Success
 .TP
-.I \fBscutil\fR, \fBipcalc\fR, \fBifconfig\fR, \fBtraceroute\fR
 1
-Error (invalid arguments, unsupported OS, network creation failure, etc.)
-.I \fBnmcli\fR, \fBipcalc\fR
-.SH DEPENDENCIES
+Error (missing dependencies, network creation failure)
 .TP
-.B Required commands:
-docker, sudo, getopt, uname
-.TP
-.B macOS specific:
-scutil, ipcalc, ifconfig, traceroute
-.TP
-.B GNU/Linux specific:
-nmcli, ipcalc
-.SH FILES
-.TP
-.I Declare-BashScript
-Sourced utility script for argument parsing and error handling
-.SH AUTHOR
-David Noble
-.SH COPYRIGHT
-Copyright \(co 2016-2025 Noble Factor.
-.br
-Licensed under the MIT License.
+2
+Invalid arguments or unsupported OS
 .SH SEE ALSO
-.BR docker-network-create (1),
-.BR docker-network (1),
-.BR docker (1),
-.BR ip (8)
-.BR nmcli (1),
-.BR scutil (8),
-.BR ipcalc (1)
+Remove-DockerNetwork(1), docker-network-create(1), ip(8), ipcalc(8), nmcli(1), avahi-daemon(8)
+.SH AUTHOR
+Noble Factor

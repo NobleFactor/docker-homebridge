@@ -1,0 +1,47 @@
+# bash completion for New-HomebridgeLocation
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_New_HomebridgeLocation() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="-h --help -F --env-file --server-role -l --location -c --country-code -s --state-or-province -C --city -O --organization-name -U --organizational-unit -D --domain-name -E --email-address"
+
+    case "${prev}" in
+        -F|--env-file)
+            # Complete .env files
+            COMPREPLY=( $(compgen -f -X '!*.env' -- "${cur}") $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --server-role)
+            # Suggest common server roles
+            COMPREPLY=( $(compgen -W "homebridge webhook" -- "${cur}") )
+            return 0
+            ;;
+        -l|--location)
+            # No specific completion, user provides value
+            return 0
+            ;;
+        -c|--country-code)
+            # Suggest common country codes
+            COMPREPLY=( $(compgen -W "US CA GB AU DE FR" -- "${cur}") )
+            return 0
+            ;;
+        -s|--state-or-province|-C|--city|-O|--organization-name|-U|--organizational-unit|-D|--domain-name|-E|--email-address)
+            # No specific completion, user provides value
+            return 0
+            ;;
+    esac
+
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+
+    return 0
+}
+
+complete -F _New_HomebridgeLocation New-HomebridgeLocation

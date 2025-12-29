@@ -69,11 +69,11 @@ MacPorts install instructions: https://www.macports.org/install.php
     # Install Utilities (ports gets priority over brew)
 
     if command -v port >/dev/null; then
-        for utility in codespell curl gawk gmake grepcidr ipcalc jq jwt-cli moreutils shellcheck shfmt; do
+        for utility in codespell curl gawk gmake gsed grepcidr ipcalc jq jwt-cli moreutils shellcheck shfmt; do
             command -v "${utility}" >/dev/null || sudo port -N install "${utility}"
         done
     elif command -v brew >/dev/null; then
-        for utility in codespell curl gawk grepcidr ipcalc jq jwt-cli make moreutils shellcheck shfmt; do
+        for utility in codespell curl gawk gnu-sed grepcidr ipcalc jq jwt-cli make moreutils shellcheck shfmt; do
             command -v "${utility}" >/dev/null || HOMEBREW_NO_INTERACTIVE=1 brew install "${utility}"
         done
     fi
@@ -104,7 +104,7 @@ MacPorts install instructions: https://www.macports.org/install.php
     ;;
 Linux)
     sudo apt-get update
-    sudo apt-get install --yes build-essential codespell curl gawk grepcidr ipcalc jq make moreutils pre-commit python3-pip shellcheck shfmt
+    sudo apt-get install --yes build-essential codespell curl gawk grepcidr ipcalc jq make moreutils network-manager pre-commit python3-pip shellcheck shfmt
     sudo "${script_root}/Install-AzureClient"
     sudo "${script_root}/Install-Docker"
     sudo "${script_root}/Install-Rclone"

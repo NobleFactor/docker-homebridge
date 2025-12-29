@@ -1,0 +1,19 @@
+#compdef Test-HomebridgeLocationGeneration
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_Test-HomebridgeLocationGeneration() {
+    local -a opts locations
+
+    # Find available test locations
+    locations=(${${(f)"$(find test -maxdepth 1 -name 'homebridge-*.env' 2>/dev/null)"}:t:s/homebridge-//:s/.env//})
+
+    opts=(
+        '(-h --help)'{-h,--help}'[Show usage information and exit]'
+        "--test-location[Location name to test]:location:(${locations[*]:-fake-wa})"
+    )
+
+    _arguments -s -S $opts
+}
+
+_Test-HomebridgeLocationGeneration "$@"

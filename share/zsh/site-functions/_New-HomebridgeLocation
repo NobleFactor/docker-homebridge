@@ -1,0 +1,24 @@
+#compdef New-HomebridgeLocation
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_New-HomebridgeLocation() {
+    local -a opts
+    opts=(
+        '(-h --help)'{-h,--help}'[Show usage information and exit]'
+        '(-F --env-file)'{-F,--env-file}'[Load environment variables from file]:env file:_files -g "*.env"'
+        '--server-role[Server role name]:role:(homebridge webhook)'
+        '(-l --location)'{-l,--location}'[Location name]:location:'
+        '(-c --country-code)'{-c,--country-code}'[Two-letter country code]:code:(US CA GB AU DE FR)'
+        '(-s --state-or-province)'{-s,--state-or-province}'[State or province name]:state:'
+        '(-C --city)'{-C,--city}'[City name]:city:'
+        '(-O --organization-name)'{-O,--organization-name}'[Organization name]:org:'
+        '(-U --organizational-unit)'{-U,--organizational-unit}'[Organizational unit]:unit:'
+        '(-D --domain-name)'{-D,--domain-name}'[Fully qualified domain name]:domain:'
+        '(-E --email-address)'{-E,--email-address}'[Email address]:email:'
+    )
+
+    _arguments -s -S $opts
+}
+
+_New-HomebridgeLocation "$@"

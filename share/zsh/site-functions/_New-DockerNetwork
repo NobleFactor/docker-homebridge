@@ -1,0 +1,26 @@
+#compdef New-DockerNetwork
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_New-DockerNetwork() {
+    local -a opts interfaces
+
+    # Get network interfaces
+    if [[ "$(uname)" == "Darwin" ]]; then
+        interfaces=(${(f)"$(ifconfig -l 2>/dev/null)"})
+    else
+        interfaces=(${(f)"$(ls /sys/class/net 2>/dev/null)"})
+    fi
+
+    opts=(
+        '(-h --help)'{-h,--help}'[Show usage information and exit]'
+        '(-d --driver)'{-d,--driver}'[Network driver to create]:driver:(bridge macvlan ipvlan host none)'
+        "--device[Parent network device]:device:(${interfaces[*]})"
+        '--ip-range[IPv4 CIDR for container assignment]:cidr:'
+        ':network-name:'
+    )
+
+    _arguments -s -S $opts
+}
+
+_New-DockerNetwork "$@"

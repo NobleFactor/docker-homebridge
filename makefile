@@ -108,8 +108,8 @@ endif
 network_name := $(shell \
     project="$(project_name)"; \
     device="$(network_device)"; \
-    length=$$(( 15 - $${#device} )); \
-    echo "$${project:0:$${length}}_$${device}")
+    length=$$(($${#device} > 15? 15 : $${#device})); \
+    echo "$${project:0:$$((62 - length))}_$${device:0:$${length}}")
 
 ## TARGETS
 
@@ -142,7 +142,7 @@ help-full: ## Show detailed usage (man page)
 
 clean: ## Stop, remove network, prune unused images/containers/volumes (DANGEROUS)
 	$(docker_compose) down --remove-orphans  # Stops AND removes containers
-	sudo docker network rm --force "$(network_name)"
+	sudo build/Remove-DockerNetwork $(network_name)
 	sudo docker system prune --force --all
 	sudo docker volume prune --force --all
 
@@ -225,7 +225,7 @@ New-HomebridgeNetwork: ## Create Docker network for Homebridge
 		echo "An IP_RANGE is required for macvlan networks. Define it in $(network_config_file) or override via: make IP_RANGE=<CIDR>"
 		exit 1
 	fi
-	build/New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" $(if $(IP_RANGE),--ip-range "$(IP_RANGE)") homebridge
+	build/New-DockerNetwork --device "$(network_device)" --driver "$(network_driver)" $(if $(IP_RANGE),--ip-range "$(IP_RANGE)") "$(network_name)"
 	echo "Network $(network_name) created"
 	
 Restart-Homebridge: $(certificate_request_conf) ## Restart container

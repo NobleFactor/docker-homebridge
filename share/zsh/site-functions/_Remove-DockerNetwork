@@ -1,0 +1,19 @@
+#compdef Remove-DockerNetwork
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_Remove-DockerNetwork() {
+    local -a opts networks
+
+    # Get docker network names
+    networks=(${(f)"$(docker network ls --format '{{.Name}}' 2>/dev/null)"})
+
+    opts=(
+        '(-h --help)'{-h,--help}'[Show usage information and exit]'
+        ":network-name-or-id:(${networks[*]})"
+    )
+
+    _arguments -s -S $opts
+}
+
+_Remove-DockerNetwork "$@"

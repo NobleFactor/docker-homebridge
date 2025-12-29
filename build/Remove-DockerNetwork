@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# shellcheck source=bin/Declare-BashScript
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
+
+# Remove-DockerNetwork - remove a docker network and artifacts created by New-DockerNetwork
+
+if [[ "$EUID" -ne 0 ]]; then
+    exec sudo "$0" "$@"  # Re-execute with sudo, passing along original arguments.
+fi
+
+source "$(dirname "$0")/Declare-BashScript" "$0" "help" "h" "$@"
+
+declare -r synopsis="Remove-DockerNetwork <network-name>"
+eval set -- "$script_arguments"
+
+[[ $* != -- ]] || usage "$synopsis"
+
+while :; do
+    case $1 in
+    -h | --help)
+        usage "$synopsis"
+        shift 1
+        ;;
+    --)
+        shift 1
+        break
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
+
+[[ -n ${1:-} ]] || error 2 "A network id or name is required."
+
+if ! network_name=$(docker network inspect --format '{{.Name}}' "$1" 2>/dev/null); then
+    error 2 "Docker network does not exist: $1"
+fi
+
+declare -r network_name
+
+###########
+# Main
+###########
+
+declare -r udev_rules=$(docker network inspect --format '{{ index .Labels "com.noblefactor.udev-rules" }}' "${network_name}")
+declare -r shim_link=$(docker network inspect --format '{{ index .Labels "com.noblefactor.shim-link" }}' "${network_name}")
+
+# 1. Stop all containers on the network
+
+docker ps --filter "network=$network_name" -q | xargs -r docker stop
+
+# 2. Update avahi-daemon configuration by removing all references to shim link
+
+declare -r avahi_daemon_conf="/etc/avahi/avahi-daemon.conf"
+
+if [[ -f "${avahi_daemon_conf}" && -n "${shim_link:-}" ]]; then
+    sed -i "s/${shim_link},//g; s/,${shim_link}//g; s/${shim_link}//g" "${avahi_daemon_conf}"
+    sed -i 's/,,*/,/g; s/,$//g' "${avahi_daemon_conf}"
+    systemctl restart avahi-daemon >/dev/null || :
+fi
+
+# 3. Delete udev rules for shim link and reload/retrigger all remaining rules
+
+if [[ -n ${udev_rules:-} ]]; then
+    rm -f "${udev_rules}" && udevadm control --reload-rules && udevadm trigger
+fi
+
+# 4. Delete shim link
+
+if [[ -n ${shim_link:-} ]]; then
+    ip link del "${shim_link}" || :
+fi
+
+# 5. Delete network
+
+if docker network rm --force "${network_name}"; then
+    success "Removed network: ${network_name}"
+else
+    error 1 "Failed to remove network: ${network_name}"
+fi

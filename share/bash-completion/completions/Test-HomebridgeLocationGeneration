@@ -1,0 +1,31 @@
+# bash completion for Test-HomebridgeLocationGeneration
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_Test_HomebridgeLocationGeneration() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="-h --help --test-location"
+
+    case "${prev}" in
+        --test-location)
+            # Suggest test locations based on existing test env files
+            local locations
+            locations=$(find test -maxdepth 1 -name 'homebridge-*.env' 2>/dev/null | sed 's/.*homebridge-\(.*\)\.env/\1/')
+            COMPREPLY=( $(compgen -W "${locations}" -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+
+    return 0
+}
+
+complete -F _Test_HomebridgeLocationGeneration Test-HomebridgeLocationGeneration

@@ -1,0 +1,14 @@
+#compdef Install-Docker
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Noble Factor. All rights reserved.
+
+_Install-Docker() {
+    local -a opts
+    opts=(
+        '(-h --help)'{-h,--help}'[Show usage information and exit]'
+    )
+
+    _arguments -s -S $opts
+}
+
+_Install-Docker "$@"
