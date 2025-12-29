@@ -113,9 +113,7 @@ while :; do
             shift 1
             break
             ;;
-        *)
-            error $EX_USAGE "Unrecognized option: $1"
-            ;;
+        *) error $EX_USAGE "Unrecognized option: $1";;
     esac
 done
 

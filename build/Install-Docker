@@ -27,8 +27,7 @@ while :; do
     --)
         shift 1
         break;;
-    *)
-        break;;
+    *) error $EX_USAGE "Unrecognized option: $1";;
     esac
 done
 

@@ -49,7 +49,7 @@ case ${os} in
             error $EX_UNAVAILABLE "nmcli is required. Use ${script_root}/Install-Dependencies to ensure all dependencies of this project are present."
         fi
         ;;
-    *) error $EX_CONFIG "Unsupported operating system: $(uname)"
+    *) error $EX_CONFIG "Unsupported operating system: $(uname)";;
 esac
 
 if ! command -v ipcalc >/dev/null; then
