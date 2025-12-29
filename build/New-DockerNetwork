@@ -18,8 +18,14 @@
 # 2. dockerdocs: Macvlan network driver
 #    https://docs.docker.com/engine/network/drivers/macvlan/
 #
-# 3. dockerdocs: Use IPv6 Networking
+# 3. dockerdocs: IPvlan network driver
+#    https://docs.docker.com/engine/network/drivers/ipvlan/
+#
+# 4. dockerdocs: Use IPv6 Networking
 #    https://docs.docker.com/engine/daemon/ipv6/
+#
+# 5. Host access to macvlan containers (shim interface workaround)
+#    https://blog.oddbit.com/post/2018-03-12-using-docker-macvlan-networks/
 #
 
 if [[ "$EUID" -ne 0 ]]; then
