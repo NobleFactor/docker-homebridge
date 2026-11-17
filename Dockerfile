@@ -14,7 +14,7 @@ FROM homebridge/homebridge:${homebridge_version}
 
 LABEL org.opencontainers.image.vendor="Noble Factor"
 LABEL org.opencontainers.image.authors="David.Noble@noblefactor.com"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 SHELL [ "/usr/bin/env", "bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c" ]
 ARG puid pgid
