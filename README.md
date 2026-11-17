@@ -87,8 +87,7 @@ Container creation uses a deterministic network with your specified `IP_RANGE`. 
 
 ## Contributing and Change Control
 
-Please read [DEVELOPMENT.md](DEVELOPMENT.md) and NobleFactor's
-[contributing terms](https://github.com/NobleFactor/.github/blob/main/CONTRIBUTING.md) before proposing changes.
+Please read [DEVELOPMENT.md](DEVELOPMENT.md) and NobleFactor's [contributing terms](https://github.com/NobleFactor/.github/blob/main/CONTRIBUTING.md) before proposing changes.
 
 - All changes require explicit pre-approval of the exact patch.
 - Pull requests must follow the template and include only the approved diff.
