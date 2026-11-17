@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 Noble Factor. All rights reserved.
-# Redistribution and use in source and binary forms, with or without modification, are permitted under the terms of the MIT License.
 
 # Declare-BashScript - Bash script argument and option parsing helper
 

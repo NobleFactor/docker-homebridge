@@ -1,6 +1,6 @@
 ########################################################################################################################
 # SPDX-FileCopyrightText: 2024-2025 Noble Factor
-# SPDX-License-Identifier: MIT AND LicenseRef-Homebridge
+# SPDX-License-Identifier: Apache-2.0 AND LicenseRef-Homebridge
 #
 # This project is licensed under the MIT License for all original work by Noble Factor. The Homebridge software and its
 # dependencies are subject to their respective licenses. See:

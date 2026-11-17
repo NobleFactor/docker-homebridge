@@ -8,7 +8,7 @@ Provide a concise summary of the change and why it’s needed.
 - [ ] Scope control: Only the approved changes are included. No drive-by formatting or comment rewrites.
 - [ ] Change rationale: This PR explains the problem, the minimal fix, and any alternatives considered.
 - [ ] Tests/verification: Include the steps or tests used to validate the change.
-- [ ] Docs updated (if applicable): CONTRIBUTING or related docs reflect any process changes.
+- [ ] Docs updated (if applicable): DEVELOPMENT.md or related docs reflect any process changes.
 
 ## Change Details
 
